@@ -1,7 +1,7 @@
 // AI Service Abstraction Layer
 // Supports both OpenAI and Gemini APIs
 
-interface AIConfig {
+export interface AIConfig {
   provider: 'openai' | 'gemini';
   apiKey: string;
   apiBase?: string;
@@ -31,11 +31,25 @@ class OpenAIService {
 
   constructor(config: AIConfig) {
     this.apiKey = config.apiKey;
-    this.apiBase = config.apiBase || 'https://api.openai.com/v1';
+    this.apiBase = (config.apiBase || 'https://api.openai.com/v1').replace(/\/$/, '');
     this.model = config.model;
   }
 
   async generateContent(options: GenerateContentOptions): Promise<{ text: string }> {
+    const messages: any[] = [];
+    
+    if (options.responseSchema) {
+      messages.push({
+        role: 'system',
+        content: this.buildSchemaInstruction(options.responseSchema),
+      });
+    }
+    
+    messages.push({
+      role: 'user',
+      content: options.prompt,
+    });
+
     const response = await fetch(`${this.apiBase}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -44,16 +58,7 @@ class OpenAIService {
       },
       body: JSON.stringify({
         model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content: this.buildSchemaInstruction(options.responseSchema),
-          },
-          {
-            role: 'user',
-            content: options.prompt,
-          },
-        ],
+        messages,
         response_format: options.responseSchema ? { type: 'json_object' } : undefined,
       }),
     });
@@ -156,8 +161,6 @@ class GeminiService {
   }
 
   async generateContent(options: GenerateContentOptions): Promise<{ text: string }> {
-    const Type = require('@google/genai').Type;
-
     const response = await this.genAI.models.generateContent({
       model: this.model,
       contents: options.prompt,

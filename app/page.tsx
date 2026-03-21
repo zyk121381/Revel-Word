@@ -85,58 +85,17 @@ const playAudio = (text: string) => {
   }
 };
 
-// Build OpenAI-compatible schema from Gemini Type schema
-const buildOpenAISchema = (geminiSchema: any) => {
-  // This is a simplified conversion for the specific schema used in this app
-  return {
-    type: "object",
-    properties: {
-      words: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            word: { type: "string", description: "英文单词" },
-            translation: { type: "string", description: "简短中文翻译（用于选择题）" },
-            definitions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  pos: { type: "string", description: "词性缩写，如 n., v., adj." },
-                  meaning: { type: "string", description: "该词性下的中文意思" }
-                },
-                required: ["pos", "meaning"]
-              }
-            },
-            relatedForms: {
-              type: "array",
-              items: { type: "string" }
-            },
-            example: { type: "string" },
-            exampleTranslation: { type: "string" },
-            distractorsZh: { type: "array", items: { type: "string" } },
-            distractorsEn: { type: "array", items: { type: "string" } }
-          },
-          required: ["word", "translation", "definitions", "relatedForms", "example", "exampleTranslation", "distractorsZh", "distractorsEn"]
-        }
-      }
-    },
-    required: ["words"]
-  };
-};
-
 const analyzeWords = async (words: string) => {
   const aiService = createAIService();
   const provider = process.env.NEXT_PUBLIC_AI_PROVIDER || 'openai';
 
   const prompt = `请分析以下英语单词列表。对于每个单词，请提供：
-1. 简短中文翻译和中文的词性（用于选择题）
+1. 简短中文翻译（必须包含词性，例如 "n. 苹果" 或 "v. 跑"）（用于选择题的题干或选项。若该单词有多个意思或多个词性要同时给出来，简短一些）
 2. 详细的词性和多重意思列表
 3. 相关的词汇变形（如过去式、过去分词、复数、副词形式等，请注明变形类型）
 4. 一个英文例句
 5. 例句的中文翻译
-6. 3个用于选择题的中文干扰项和它们的词性（与其他单词的意思不同）
+6. 3个用于选择题的中文干扰项（必须包含词性，例如 "adj. 快的"）。注意：中文干扰项必须具有迷惑性，且选项之间不可以出现重复的词语（除非词性不同）。
 7. 3个用于选择题的英文干扰项（形近词或其他单词）
 
 如果输入的文本中包含非英语单词或无意义的内容，请忽略它们。只返回有效英语单词的分析结果。
@@ -152,14 +111,14 @@ ${words}`;
       words: [
         {
           word: "英文单词",
-          translation: "简短中文翻译",
+          translation: "n. 简短中文翻译",
           definitions: [
             { pos: "n.", meaning: "名词含义" }
           ],
           relatedForms: ["过去式", "过去分词", "复数形式"],
           example: "英文例句",
           exampleTranslation: "例句翻译",
-          distractorsZh: ["干扰项1", "干扰项2", "干扰项3"],
+          distractorsZh: ["v. 干扰项1", "adj. 干扰项2", "n. 干扰项3"],
           distractorsEn: ["distraction1", "distraction2", "distraction3"]
         }
       ]
@@ -174,7 +133,7 @@ ${words}`;
           type: Type.OBJECT,
           properties: {
             word: { type: Type.STRING, description: "英文单词" },
-            translation: { type: Type.STRING, description: "简短中文翻译（用于选择题）" },
+            translation: { type: Type.STRING, description: "简短中文翻译（必须包含词性，如 n. 苹果）" },
             definitions: {
               type: Type.ARRAY,
               items: {
@@ -194,7 +153,7 @@ ${words}`;
             },
             example: { type: Type.STRING, description: "英文例句" },
             exampleTranslation: { type: Type.STRING, description: "例句中文翻译" },
-            distractorsZh: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3个中文干扰项" },
+            distractorsZh: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3个中文干扰项（必须包含词性，如 v. 跑）" },
             distractorsEn: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3个英文干扰项" },
           },
           required: ["word", "translation", "definitions", "relatedForms", "example", "exampleTranslation", "distractorsZh", "distractorsEn"]
@@ -540,13 +499,18 @@ export default function App() {
       }
       
       const progresses: WordProgress[] = analyzed.map(word => {
-        const baseTypes: ExerciseType[] = ['EN_TO_ZH', 'ZH_TO_EN', 'FILL', 'AUDIO_TO_ZH'];
+        const allTypes: ExerciseType[] = ['EN_TO_ZH', 'ZH_TO_EN', 'FILL', 'AUDIO_TO_ZH', 'AUDIO_SPELL'];
+        const shuffled = shuffleArray(allTypes);
+        // pick 2 to 3 from shuffled, then add 'SPELL'
+        const count = Math.floor(Math.random() * 2) + 2; // 2 or 3
+        const selected = shuffled.slice(0, count);
+        
         return {
           wordData: word,
           step: 0,
           dueAt: Math.floor(Math.random() * 3), // slight initial jitter to mix words
           status: 'LEARNING',
-          sequence: [...shuffleArray(baseTypes), 'AUDIO_SPELL', 'SPELL']
+          sequence: [...selected, 'SPELL']
         };
       });
       setWordProgresses(progresses);
@@ -638,6 +602,15 @@ export default function App() {
         }
       } else {
         progress.dueAt = newCounter; // Immediate review
+        
+        // Ensure all 6 types are in sequence if a mistake is made, and SPELL is always the last
+        const allTypes: ExerciseType[] = ['EN_TO_ZH', 'ZH_TO_EN', 'FILL', 'AUDIO_TO_ZH', 'AUDIO_SPELL', 'SPELL'];
+        const missingTypes = allTypes.filter(t => !progress.sequence.includes(t));
+        if (missingTypes.length > 0) {
+          const sequenceWithoutSpell = progress.sequence.filter(t => t !== 'SPELL');
+          const missingWithoutSpell = missingTypes.filter(t => t !== 'SPELL');
+          progress.sequence = [...sequenceWithoutSpell, ...shuffleArray(missingWithoutSpell), 'SPELL'];
+        }
       }
       
       newProgresses[progressIndex] = progress;
@@ -885,6 +858,9 @@ export default function App() {
                         
                         <div className="space-y-3 bg-white/60 p-5 rounded-xl text-left mt-4">
                           <p className="text-lg mb-2"><span className="font-semibold text-slate-700">正确答案：</span><span className="font-bold text-slate-900">{getCorrectAnswerText()}</span></p>
+                          {['SPELL', 'FILL', 'AUDIO_SPELL'].includes(currentExercise.type) && (
+                            <p className="text-lg mb-2"><span className="font-semibold text-slate-700">你的答案：</span><span className="font-bold text-rose-600 line-through">{userAnswer}</span></p>
+                          )}
                           <div className="pt-3 border-t border-slate-200/60">
                             <div className="flex items-center gap-2">
                               <p className="font-bold text-slate-900 text-xl">{currentExercise.word.word}</p>
