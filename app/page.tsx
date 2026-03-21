@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, CheckCircle, XCircle, ArrowRight, RefreshCw, Trophy, Volume2, MessageCircle, X, Send, Loader2, Bot } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { createAIService, type AIConfig } from '@/lib/ai-service';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 // --- Types ---
 type ExerciseType = 'EN_TO_ZH' | 'ZH_TO_EN' | 'SPELL' | 'FILL' | 'AUDIO_TO_ZH' | 'AUDIO_SPELL';
@@ -91,11 +92,11 @@ const analyzeWords = async (words: string) => {
 
   const prompt = `请分析以下英语单词列表。对于每个单词，请提供：
 1. 简短中文翻译（必须包含词性，例如 "n. 苹果" 或 "v. 跑"）（用于选择题的题干或选项。若该单词有多个意思或多个词性要同时给出来，简短一些）
-2. 详细的词性和多重意思列表
+2. 详细的词性和多重意思列表（请务必使用中文解释每个词性的含义，绝对不要使用英文释义）
 3. 相关的词汇变形（如过去式、过去分词、复数、副词形式等，请注明变形类型）
 4. 一个英文例句
 5. 例句的中文翻译
-6. 3个用于选择题的中文干扰项（必须包含词性，例如 "adj. 快的"）。注意：中文干扰项必须具有迷惑性，且选项之间不可以出现重复的词语（除非词性不同）。
+6. 3个用于选择题的中文干扰项（必须包含词性，例如 "adj. 快的"）。注意：中文干扰项必须具有迷惑性，且选项之间不可以出现重复的词语（除非词性不同）。**非常重要：如果正确答案（简短中文翻译）包含多个词性或多个意思导致较长，请确保这3个干扰项也具有类似的长度和格式（例如也包含多个词性和意思），避免用户通过选项长度直接猜出正确答案。**
 7. 3个用于选择题的英文干扰项（形近词或其他单词）
 
 如果输入的文本中包含非英语单词或无意义的内容，请忽略它们。只返回有效英语单词的分析结果。
@@ -118,7 +119,7 @@ ${words}`;
           relatedForms: ["过去式", "过去分词", "复数形式"],
           example: "英文例句",
           exampleTranslation: "例句翻译",
-          distractorsZh: ["v. 干扰项1", "adj. 干扰项2", "n. 干扰项3"],
+          distractorsZh: ["v. 干扰项1 (长度需与正确答案相似)", "adj. 干扰项2", "n. 干扰项3"],
           distractorsEn: ["distraction1", "distraction2", "distraction3"]
         }
       ]
@@ -144,7 +145,7 @@ ${words}`;
                 },
                 required: ["pos", "meaning"]
               },
-              description: "单词的详细词性和多重意思"
+              description: "单词的详细词性和多重意思（必须使用中文解释）"
             },
             relatedForms: {
               type: Type.ARRAY,
@@ -153,7 +154,7 @@ ${words}`;
             },
             example: { type: Type.STRING, description: "英文例句" },
             exampleTranslation: { type: Type.STRING, description: "例句中文翻译" },
-            distractorsZh: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3个中文干扰项（必须包含词性，如 v. 跑）" },
+            distractorsZh: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3个中文干扰项（必须包含词性，如 v. 跑。长度和格式必须与正确答案相似，避免过短）" },
             distractorsEn: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3个英文干扰项" },
           },
           required: ["word", "translation", "definitions", "relatedForms", "example", "exampleTranslation", "distractorsZh", "distractorsEn"]
@@ -184,7 +185,7 @@ ${words}`;
 };
 
 // --- Components ---
-const RingChart = ({ percentage, label, size = 120, strokeWidth = 10, colorClass = "text-indigo-600" }: { percentage: number, label?: string, size?: number, strokeWidth?: number, colorClass?: string }) => {
+const RingChart = ({ percentage, label, size = 120, strokeWidth = 10, colorClass = "text-indigo-600 dark:text-indigo-400" }: { percentage: number, label?: string, size?: number, strokeWidth?: number, colorClass?: string }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (percentage / 100) * circumference;
@@ -199,7 +200,7 @@ const RingChart = ({ percentage, label, size = 120, strokeWidth = 10, colorClass
           stroke="currentColor"
           strokeWidth={strokeWidth}
           fill="transparent"
-          className="text-slate-100"
+          className="text-slate-100 dark:text-slate-800"
         />
         <circle
           cx={size / 2}
@@ -215,8 +216,8 @@ const RingChart = ({ percentage, label, size = 120, strokeWidth = 10, colorClass
         />
       </svg>
       <div className="absolute flex flex-col items-center justify-center">
-        <span className="text-xl font-bold text-slate-800">{percentage}%</span>
-        {label && <span className="text-xs text-slate-500 font-medium mt-1">{label}</span>}
+        <span className="text-xl font-bold text-slate-800 dark:text-slate-100">{percentage}%</span>
+        {label && <span className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">{label}</span>}
       </div>
     </div>
   );
@@ -247,11 +248,11 @@ const SpellInput = ({ onSubmit, placeholder, maskedWord }: { onSubmit: (val: str
       }}
     >
       {maskedWord && (
-        <div className="text-center text-3xl font-mono tracking-widest text-slate-400 mb-6">
+        <div className="text-center text-3xl font-mono tracking-widest text-slate-400 dark:text-slate-500 mb-6">
           {maskedWord.split('').map((char, i) => 
             char === '_' ? 
-              <span key={i} className="inline-block w-6 border-b-4 border-slate-300 mx-1 mb-1"></span> : 
-              <span key={i} className="inline-block w-6 mx-1 text-slate-800 font-bold">{char}</span>
+              <span key={i} className="inline-block w-6 border-b-4 border-slate-300 dark:border-slate-600 mx-1 mb-1"></span> : 
+              <span key={i} className="inline-block w-6 mx-1 text-slate-800 dark:text-slate-100 font-bold">{char}</span>
           )}
         </div>
       )}
@@ -261,7 +262,7 @@ const SpellInput = ({ onSubmit, placeholder, maskedWord }: { onSubmit: (val: str
         value={val} 
         onChange={e => setVal(e.target.value)} 
         onKeyDown={handleKeyDown}
-        className="w-full text-center text-2xl p-4 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all"
+        className="w-full text-center text-2xl p-4 border-2 border-slate-200 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all"
         placeholder={placeholder || "输入英文单词..."}
         autoCapitalize="none"
         autoComplete="off"
@@ -292,9 +293,9 @@ const MultipleChoice = ({ options, onSubmit }: { options: string[], onSubmit: (v
         <button
           key={i}
           onClick={() => onSubmit(opt)}
-          className="p-6 text-lg font-medium text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all active:scale-95 text-left flex items-center"
+          className="p-6 text-lg font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-xl hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-95 text-left flex items-center"
         >
-          <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mr-4 text-sm font-bold shrink-0">
+          <span className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center mr-4 text-sm font-bold shrink-0">
             {String.fromCharCode(65 + i)}
           </span>
           <span>{opt}</span>
@@ -361,7 +362,7 @@ const AIAssistant = () => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 w-[360px] h-[500px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-50 overflow-hidden"
+            className="fixed bottom-24 right-6 w-[360px] h-[500px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col z-50 overflow-hidden"
           >
             <div className="bg-indigo-600 text-white p-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
@@ -373,17 +374,17 @@ const AIAssistant = () => {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
               {messages.length === 0 && (
-                <div className="text-center text-slate-400 mt-10 text-sm">
+                <div className="text-center text-slate-400 dark:text-slate-500 mt-10 text-sm">
                   有什么关于英语单词或语法的问题？<br/>随时问我吧！
                 </div>
               )}
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] px-4 py-2 ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm' : 'bg-white border border-slate-200 text-slate-700 rounded-2xl rounded-tl-sm shadow-sm'}`}>
+                  <div className={`max-w-[85%] px-4 py-2 ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl rounded-tl-sm shadow-sm'}`}>
                     {msg.role === 'assistant' ? (
-                      <div className="markdown-body text-sm prose prose-slate prose-sm max-w-none">
+                      <div className="markdown-body text-sm prose prose-slate dark:prose-invert prose-sm max-w-none">
                         <Markdown>{msg.content}</Markdown>
                       </div>
                     ) : (
@@ -394,28 +395,28 @@ const AIAssistant = () => {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-white border border-slate-200 text-slate-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-                    <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" />
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-3 bg-white border-t border-slate-100 shrink-0">
-              <div className="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-2">
+            <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2">
                 <input
                   type="text"
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleSend(); }}
                   placeholder="输入你的问题..."
-                  className="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 placeholder-slate-400"
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
-                  className="text-indigo-600 disabled:text-slate-400 transition-colors p-1"
+                  className="text-indigo-600 dark:text-indigo-400 disabled:text-slate-400 dark:disabled:text-slate-600 transition-colors p-1"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -682,10 +683,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-2 text-indigo-600">
-          <BookOpen className="w-6 h-6" />
-          <h1 className="text-xl font-bold tracking-tight">Revel Word</h1>
+      <header className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 transition-colors duration-300">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between text-indigo-600 dark:text-indigo-400">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-6 h-6" />
+            <h1 className="text-xl font-bold tracking-tight">Revel Word</h1>
+          </div>
+          <ThemeToggle />
         </div>
       </header>
 
@@ -699,14 +703,14 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="max-w-2xl mx-auto mt-12 px-4"
             >
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 mb-2">输入你要复习的单词</h2>
-                <p className="text-slate-500 mb-6">支持用逗号、空格或换行分隔。AI 将自动为你生成多维度的记忆测试。建议每次输入 10-20 个单词。</p>
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800">
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">输入你要复习的单词</h2>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">支持用逗号、空格或换行分隔。AI 将自动为你生成多维度的记忆测试。建议每次输入 10-20 个单词。</p>
                 
                 <textarea
                   value={wordsInput}
                   onChange={e => setWordsInput(e.target.value)}
-                  className="w-full h-48 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none transition-all text-slate-700 text-lg"
+                  className="w-full h-48 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none transition-all text-slate-700 dark:text-slate-200 text-lg"
                   placeholder="例如: apple, banana, computer..."
                 />
                 
@@ -733,12 +737,12 @@ export default function App() {
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                className="inline-block mb-6 text-indigo-600"
+                className="inline-block mb-6 text-indigo-600 dark:text-indigo-400"
               >
                 <RefreshCw className="w-12 h-12" />
               </motion.div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">AI 正在分析单词...</h2>
-              <p className="text-slate-500">正在为你生成中文翻译、例句及多维度测试题，请稍候。</p>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">AI 正在分析单词...</h2>
+              <p className="text-slate-500 dark:text-slate-400">正在为你生成中文翻译、例句及多维度测试题，请稍候。</p>
             </motion.div>
           )}
 
@@ -752,13 +756,13 @@ export default function App() {
             >
               <div className="flex-1 w-full">
                 <div className="mb-8">
-                  <div className="flex justify-between text-sm font-medium text-slate-500 mb-2">
+                  <div className="flex justify-between text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">
                     <span>已掌握: {masteredCount} / {totalWords} 词</span>
                     <span>学习中: {learningCount} 词</span>
                   </div>
-                  <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                     <motion.div 
-                      className="h-full bg-indigo-600"
+                      className="h-full bg-indigo-600 dark:bg-indigo-500"
                       initial={{ width: 0 }}
                       animate={{ width: `${(completedSteps / totalSteps) * 100}%` }}
                       transition={{ duration: 0.5 }}
@@ -766,14 +770,14 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="bg-white p-6 sm:p-10 rounded-3xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-900 p-6 sm:p-10 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 min-h-[400px] flex flex-col relative overflow-hidden">
                 <AnimatePresence>
                   {showSuccessAnim && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm"
+                      className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm"
                     >
                       <motion.div
                         initial={{ scale: 0, rotate: -180 }}
@@ -786,7 +790,7 @@ export default function App() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="mt-6 text-3xl font-bold text-emerald-600"
+                        className="mt-6 text-3xl font-bold text-emerald-600 dark:text-emerald-400"
                       >
                         回答正确！
                       </motion.h3>
@@ -804,7 +808,7 @@ export default function App() {
                       className="flex-1 flex flex-col"
                     >
                       <div className="mb-8 text-center">
-                        <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-sm font-semibold mb-4">
+                        <span className="inline-block px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-semibold mb-4">
                           {currentExercise.type === 'EN_TO_ZH' && '选择正确的中文意思'}
                           {currentExercise.type === 'ZH_TO_EN' && '选择正确的英文单词'}
                           {currentExercise.type === 'SPELL' && '根据中文拼写单词'}
@@ -816,19 +820,19 @@ export default function App() {
                           <div className="flex flex-col items-center justify-center gap-4">
                             <button 
                               onClick={() => playAudio(currentExercise.word.word)} 
-                              className="w-24 h-24 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-200 transition-colors shadow-sm"
+                              className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center hover:bg-indigo-200 dark:hover:bg-indigo-800/50 transition-colors shadow-sm"
                             >
                               <Volume2 className="w-12 h-12" />
                             </button>
-                            <h2 className="text-2xl font-bold text-slate-800 mt-2">
+                            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-2">
                               {currentExercise.type === 'AUDIO_TO_ZH' ? '请选择听到的单词意思' : '请拼写听到的单词'}
                             </h2>
                           </div>
                         ) : (
-                          <h2 className="text-4xl font-bold text-slate-800 flex items-center justify-center gap-3">
+                          <h2 className="text-4xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-3">
                             {currentExercise.type === 'EN_TO_ZH' ? currentExercise.word.word : currentExercise.word.translation}
                             {currentExercise.type === 'EN_TO_ZH' && (
-                              <button onClick={() => playAudio(currentExercise.word.word)} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                              <button onClick={() => playAudio(currentExercise.word.word)} className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                 <Volume2 className="w-6 h-6" />
                               </button>
                             )}
@@ -850,29 +854,29 @@ export default function App() {
                       animate={{ opacity: 1, y: 0 }}
                       className="flex-1 flex flex-col justify-center"
                     >
-                      <div className="p-6 sm:p-8 rounded-2xl bg-rose-50 text-rose-800">
+                      <div className="p-6 sm:p-8 rounded-2xl bg-rose-50 dark:bg-rose-900/20 text-rose-800 dark:text-rose-200">
                         <div className="flex items-center gap-3 mb-4">
-                          <XCircle className="w-8 h-8 text-rose-500" />
+                          <XCircle className="w-8 h-8 text-rose-500 dark:text-rose-400" />
                           <h3 className="text-2xl font-bold">回答错误</h3>
                         </div>
                         
-                        <div className="space-y-3 bg-white/60 p-5 rounded-xl text-left mt-4">
-                          <p className="text-lg mb-2"><span className="font-semibold text-slate-700">正确答案：</span><span className="font-bold text-slate-900">{getCorrectAnswerText()}</span></p>
+                        <div className="space-y-3 bg-white/60 dark:bg-slate-900/60 p-5 rounded-xl text-left mt-4">
+                          <p className="text-lg mb-2"><span className="font-semibold text-slate-700 dark:text-slate-300">正确答案：</span><span className="font-bold text-slate-900 dark:text-slate-100">{getCorrectAnswerText()}</span></p>
                           {['SPELL', 'FILL', 'AUDIO_SPELL'].includes(currentExercise.type) && (
-                            <p className="text-lg mb-2"><span className="font-semibold text-slate-700">你的答案：</span><span className="font-bold text-rose-600 line-through">{userAnswer}</span></p>
+                            <p className="text-lg mb-2"><span className="font-semibold text-slate-700 dark:text-slate-300">你的答案：</span><span className="font-bold text-rose-600 dark:text-rose-400 line-through">{userAnswer}</span></p>
                           )}
-                          <div className="pt-3 border-t border-slate-200/60">
+                          <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-slate-900 text-xl">{currentExercise.word.word}</p>
-                              <button onClick={() => playAudio(currentExercise.word.word)} className="text-slate-400 hover:text-indigo-600">
+                              <p className="font-bold text-slate-900 dark:text-slate-100 text-xl">{currentExercise.word.word}</p>
+                              <button onClick={() => playAudio(currentExercise.word.word)} className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
                                 <Volume2 className="w-5 h-5" />
                               </button>
                             </div>
                             
                             <div className="mt-2 space-y-1">
                               {currentExercise.word.definitions?.map((def, i) => (
-                                <p key={i} className="text-slate-700">
-                                  <span className="font-semibold text-indigo-600 mr-2">{def.pos}</span>
+                                <p key={i} className="text-slate-700 dark:text-slate-300">
+                                  <span className="font-semibold text-indigo-600 dark:text-indigo-400 mr-2">{def.pos}</span>
                                   {def.meaning}
                                 </p>
                               ))}
@@ -881,16 +885,16 @@ export default function App() {
                             {currentExercise.word.relatedForms && currentExercise.word.relatedForms.length > 0 && (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 {currentExercise.word.relatedForms.map((form, i) => (
-                                  <span key={i} className="px-2 py-1 bg-slate-200/70 text-slate-600 text-sm rounded-md">
+                                  <span key={i} className="px-2 py-1 bg-slate-200/70 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300 text-sm rounded-md">
                                     {form}
                                   </span>
                                 ))}
                               </div>
                             )}
 
-                            <div className="mt-4 p-3 bg-indigo-50/50 rounded-lg">
-                              <p className="text-slate-700 text-lg">{currentExercise.word.example}</p>
-                              <p className="text-slate-500 mt-1">{currentExercise.word.exampleTranslation}</p>
+                            <div className="mt-4 p-3 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-lg">
+                              <p className="text-slate-700 dark:text-slate-300 text-lg">{currentExercise.word.example}</p>
+                              <p className="text-slate-500 dark:text-slate-400 mt-1">{currentExercise.word.exampleTranslation}</p>
                             </div>
                           </div>
                         </div>
@@ -914,8 +918,8 @@ export default function App() {
             </div>
 
             <div className="w-full lg:w-80 shrink-0 space-y-6">
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col items-center">
-                  <h3 className="text-lg font-bold text-slate-800 mb-6 w-full text-left">整体准确率</h3>
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col items-center">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 w-full text-left">整体准确率</h3>
                   <RingChart 
                     percentage={
                       Object.values(stats).reduce((sum, s) => sum + s.total, 0) === 0 
@@ -924,36 +928,36 @@ export default function App() {
                     } 
                     size={160} 
                     strokeWidth={14} 
-                    colorClass="text-indigo-600" 
+                    colorClass="text-indigo-600 dark:text-indigo-400" 
                   />
                 </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-                  <h3 className="text-lg font-bold text-slate-800 mb-6">各题型准确率</h3>
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6">各题型准确率</h3>
                   <div className="grid grid-cols-2 gap-6">
                     <div className="flex flex-col items-center">
-                      <RingChart percentage={getAccuracy('EN_TO_ZH')} size={80} strokeWidth={8} colorClass="text-emerald-500" />
-                      <span className="text-xs font-medium text-slate-500 mt-2">英译中</span>
+                      <RingChart percentage={getAccuracy('EN_TO_ZH')} size={80} strokeWidth={8} colorClass="text-emerald-500 dark:text-emerald-400" />
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">英译中</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <RingChart percentage={getAccuracy('ZH_TO_EN')} size={80} strokeWidth={8} colorClass="text-blue-500" />
-                      <span className="text-xs font-medium text-slate-500 mt-2">中译英</span>
+                      <RingChart percentage={getAccuracy('ZH_TO_EN')} size={80} strokeWidth={8} colorClass="text-blue-500 dark:text-blue-400" />
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">中译英</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <RingChart percentage={getAccuracy('FILL')} size={80} strokeWidth={8} colorClass="text-amber-500" />
-                      <span className="text-xs font-medium text-slate-500 mt-2">补全单词</span>
+                      <RingChart percentage={getAccuracy('FILL')} size={80} strokeWidth={8} colorClass="text-amber-500 dark:text-amber-400" />
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">补全单词</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <RingChart percentage={getAccuracy('SPELL')} size={80} strokeWidth={8} colorClass="text-rose-500" />
-                      <span className="text-xs font-medium text-slate-500 mt-2">拼写</span>
+                      <RingChart percentage={getAccuracy('SPELL')} size={80} strokeWidth={8} colorClass="text-rose-500 dark:text-rose-400" />
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">拼写</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <RingChart percentage={getAccuracy('AUDIO_TO_ZH')} size={80} strokeWidth={8} colorClass="text-purple-500" />
-                      <span className="text-xs font-medium text-slate-500 mt-2">听音辨意</span>
+                      <RingChart percentage={getAccuracy('AUDIO_TO_ZH')} size={80} strokeWidth={8} colorClass="text-purple-500 dark:text-purple-400" />
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">听音辨意</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <RingChart percentage={getAccuracy('AUDIO_SPELL')} size={80} strokeWidth={8} colorClass="text-pink-500" />
-                      <span className="text-xs font-medium text-slate-500 mt-2">听音拼写</span>
+                      <RingChart percentage={getAccuracy('AUDIO_SPELL')} size={80} strokeWidth={8} colorClass="text-pink-500 dark:text-pink-400" />
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">听音拼写</span>
                     </div>
                   </div>
                 </div>
@@ -972,44 +976,44 @@ export default function App() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
-                className="inline-block mb-6 bg-yellow-100 p-6 rounded-full text-yellow-500"
+                className="inline-block mb-6 bg-yellow-100 dark:bg-yellow-900/30 p-6 rounded-full text-yellow-500 dark:text-yellow-400"
               >
                 <Trophy className="w-16 h-16" />
               </motion.div>
-              <h2 className="text-3xl font-bold text-slate-800 mb-4">太棒了！</h2>
-              <p className="text-slate-600 text-lg mb-8">你已经成功掌握了这批所有的单词！</p>
+              <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-4">太棒了！</h2>
+              <p className="text-slate-600 dark:text-slate-300 text-lg mb-8">你已经成功掌握了这批所有的单词！</p>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8 text-left">
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                  <div className="text-sm text-slate-500 mb-1">英译中准确率</div>
-                  <div className="text-2xl font-bold text-slate-800">{getAccuracy('EN_TO_ZH')}%</div>
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">英译中准确率</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{getAccuracy('EN_TO_ZH')}%</div>
                 </div>
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                  <div className="text-sm text-slate-500 mb-1">中译英准确率</div>
-                  <div className="text-2xl font-bold text-slate-800">{getAccuracy('ZH_TO_EN')}%</div>
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">中译英准确率</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{getAccuracy('ZH_TO_EN')}%</div>
                 </div>
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                  <div className="text-sm text-slate-500 mb-1">补全单词准确率</div>
-                  <div className="text-2xl font-bold text-slate-800">{getAccuracy('FILL')}%</div>
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">补全单词准确率</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{getAccuracy('FILL')}%</div>
                 </div>
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                  <div className="text-sm text-slate-500 mb-1">拼写准确率</div>
-                  <div className="text-2xl font-bold text-slate-800">{getAccuracy('SPELL')}%</div>
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">拼写准确率</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{getAccuracy('SPELL')}%</div>
                 </div>
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                  <div className="text-sm text-slate-500 mb-1">听音辨意准确率</div>
-                  <div className="text-2xl font-bold text-slate-800">{getAccuracy('AUDIO_TO_ZH')}%</div>
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">听音辨意准确率</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{getAccuracy('AUDIO_TO_ZH')}%</div>
                 </div>
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                  <div className="text-sm text-slate-500 mb-1">听音拼写准确率</div>
-                  <div className="text-2xl font-bold text-slate-800">{getAccuracy('AUDIO_SPELL')}%</div>
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">听音拼写准确率</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{getAccuracy('AUDIO_SPELL')}%</div>
                 </div>
               </div>
 
               <div className="mb-8">
                 <button
                   onClick={() => setShowWordStats(!showWordStats)}
-                  className="text-indigo-600 font-medium hover:text-indigo-800 transition-colors flex items-center justify-center w-full"
+                  className="text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors flex items-center justify-center w-full"
                 >
                   {showWordStats ? '隐藏每个单词的统计' : '查看每个单词的统计'}
                 </button>
@@ -1022,25 +1026,25 @@ export default function App() {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden mt-4"
                     >
-                      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden text-left">
-                        <div className="grid grid-cols-3 bg-slate-50 p-3 border-b border-slate-200 text-sm font-bold text-slate-600">
+                      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden text-left">
+                        <div className="grid grid-cols-3 bg-slate-50 dark:bg-slate-950 p-3 border-b border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-600 dark:text-slate-400">
                           <div>单词</div>
                           <div className="text-center">正确率</div>
                           <div className="text-center">错误次数</div>
                         </div>
-                        <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-64 overflow-y-auto">
                           {Object.entries(wordStats).map(([word, stat]) => {
                             const total = stat.correct + stat.incorrect;
                             const acc = total > 0 ? Math.round((stat.correct / total) * 100) : 0;
                             return (
                               <div key={word} className="grid grid-cols-3 p-3 text-sm items-center">
-                                <div className="font-medium text-slate-800">{word}</div>
+                                <div className="font-medium text-slate-800 dark:text-slate-200">{word}</div>
                                 <div className="text-center">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${acc >= 80 ? 'bg-emerald-100 text-emerald-700' : acc >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${acc >= 80 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : acc >= 60 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
                                     {acc}%
                                   </span>
                                 </div>
-                                <div className="text-center font-mono text-slate-600">{stat.incorrect}</div>
+                                <div className="text-center font-mono text-slate-600 dark:text-slate-400">{stat.incorrect}</div>
                               </div>
                             );
                           })}
