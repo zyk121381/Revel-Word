@@ -50,7 +50,11 @@ Copy `.env.local.example` to `.env.local`:
 cp .env.local.example .env.local
 ```
 
-Configure your API key in `.env.local`:
+Choose the configuration method based on your use case:
+
+#### Option 1: Development/Learning Environment (Client-side Mode)
+
+Suitable for local development, testing, and learning. API keys will be exposed on the client side:
 
 ```env
 # AI Provider Selection: openai or gemini
@@ -66,6 +70,31 @@ NEXT_PUBLIC_GEMINI_API_KEY="your-gemini-api-key"
 NEXT_PUBLIC_GEMINI_MODEL="gemini-3.1-pro-preview"
 ```
 
+> ⚠️ **Note**: This mode exposes API keys to the client side, only suitable for personal learning and testing.
+
+#### Option 2: Production Environment (Server-side Mode, Recommended)
+
+Suitable for server deployment. API keys are only used on the server side, more secure:
+
+```env
+# AI Provider Selection: openai or gemini
+AI_PROVIDER="openai"
+
+# OpenAI API Configuration
+OPENAI_API_KEY="your-openai-api-key"
+OPENAI_API_BASE="https://api.openai.com/v1"
+OPENAI_MODEL="gpt-4o-mini"
+
+# Gemini API Configuration (optional)
+GEMINI_API_KEY="your-gemini-api-key"
+GEMINI_MODEL="gemini-3.1-pro-preview"
+
+# Application URL (optional)
+APP_URL="http://localhost:3000"
+```
+
+> ✅ **Recommended**: In this mode, API keys are not exposed to the client side, providing higher security.
+
 > 💡 OpenAI API version supports third-party services compatible with OpenAI API, such as OpenRouter, DeepSeek, Qwen, Moonshot, etc.
 
 3. Start the development server
@@ -76,12 +105,24 @@ npm run dev
 
 4. Open your browser and visit `http://localhost:3000`
 
-### Production Build
+### Production Build & Deployment
+
+Build the project:
 
 ```bash
 npm run build
-npm run start
 ```
+
+Start the production server:
+
+```bash
+npm start
+```
+
+**Deployment Notes**:
+- When configuring environment variables on the server, refer to "Option 2: Production Environment (Server-side Mode)" in the "Installation" section above
+- Ensure you use variables without the `NEXT_PUBLIC_` prefix (such as `OPENAI_API_KEY`) for API key security
+- Consider using PM2 or systemd for managing the Node.js process
 
 ## 📖 How to Use
 
@@ -104,6 +145,8 @@ npm run start
 
 ## 🔧 Environment Variables
 
+### Development/Learning Environment (Client-side Mode)
+
 | Variable | Description | Required | Default |
 |----------|-------------|----------|---------|
 | `NEXT_PUBLIC_AI_PROVIDER` | AI provider (openai/gemini) | ❌ | openai |
@@ -112,6 +155,22 @@ npm run start
 | `NEXT_PUBLIC_OPENAI_MODEL` | OpenAI model to use | ❌ | gpt-4o-mini |
 | `NEXT_PUBLIC_GEMINI_API_KEY` | Gemini API key | Choose one | - |
 | `NEXT_PUBLIC_GEMINI_MODEL` | Gemini model to use | ❌ | gemini-3.1-pro-preview |
+
+### Production Environment (Server-side Mode, More Secure)
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `AI_PROVIDER` | AI provider (openai/gemini) | ❌ | openai |
+| `OPENAI_API_KEY` | OpenAI API key | Choose one | - |
+| `OPENAI_API_BASE` | OpenAI API base URL | ❌ | https://api.openai.com/v1 |
+| `OPENAI_MODEL` | OpenAI model to use | ❌ | gpt-4o-mini |
+| `GEMINI_API_KEY` | Gemini API key | Choose one | - |
+| `GEMINI_MODEL` | Gemini model to use | ❌ | gemini-3.1-pro-preview |
+| `APP_URL` | Application deployment URL | ❌ | http://localhost:3000 |
+
+**Security Notes**:
+- Client-side mode (`NEXT_PUBLIC_*`): Variables are exposed to the browser, only suitable for local development or learning/testing
+- Server-side mode (without prefix): Variables are only used on the server and not exposed to the client, suitable for production deployment
 
 ### Supported Models
 
@@ -145,16 +204,24 @@ npm run start
 ```
 revelation-ai-studio-applet/
 ├── app/                    # Next.js app directory
+│   ├── api/                # API Routes (server-side)
+│   │   ├── chat/           # Chat API endpoint
+│   │   └── generate/       # Content generation API endpoint
 │   ├── layout.tsx          # Root layout
-│   ├── page.tsx            # Main application page
+│   ├── page.tsx            # Main application page (client-side)
 │   └── globals.css         # Global styles
 ├── lib/
-│   ├── ai-service.ts       # AI service abstraction layer
+│   ├── ai-server.ts        # Server-side AI service abstraction layer
+│   ├── ai-service.ts       # Client-side AI service wrapper
+│   ├── rate-limit.ts       # API rate limiting
 │   └── utils.ts            # Utility functions
 ├── hooks/
 │   └── use-mobile.ts       # Mobile detection hook
+├── components/             # React components
+│   ├── ThemeProvider.tsx   # Theme provider
+│   └── ThemeToggle.tsx     # Theme toggle button
 ├── .env.local.example      # Environment variables example
-├── MIGRATION.md            # Migration guide
+├── .env.local              # Local environment variables (not committed to Git)
 └── package.json            # Project configuration
 ```
 
@@ -164,9 +231,9 @@ revelation-ai-studio-applet/
 
 The project uses the scientifically proven Spaced Repetition algorithm to optimize memory retention:
 
-1. **Initial Learning** - Each word requires completing 6 exercise types
+1. **Initial Learning** - Each word requires completing 3-4 exercise types
 2. **Correct Answer Strategy** - Review again after 2-3 steps delay
-3. **Incorrect Answer Strategy** - Immediate review
+3. **Incorrect Answer Strategy** - Immediate review, and previously untrained exercise types are automatically added to the answer list
 4. **Mastery Standard** - Complete all exercise types with required accuracy
 
 ### Progress Tracking

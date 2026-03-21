@@ -86,9 +86,8 @@ const playAudio = (text: string) => {
   }
 };
 
-const analyzeWords = async (words: string) => {
+const analyzeWords = async (words: string): Promise<WordData[]> => {
   const aiService = createAIService();
-  const provider = process.env.NEXT_PUBLIC_AI_PROVIDER || 'openai';
 
   const prompt = `请分析以下英语单词列表。对于每个单词，请提供：
 1. 简短中文翻译（必须包含词性，例如 "n. 苹果" 或 "v. 跑"）（用于选择题的题干或选项。若该单词有多个意思或多个词性要同时给出来，简短一些）
@@ -104,66 +103,44 @@ const analyzeWords = async (words: string) => {
 单词列表：
 ${words}`;
 
-  let responseSchema: any;
-
-  if (provider === 'openai') {
-    // OpenAI schema format
-    responseSchema = {
-      words: [
-        {
-          word: "英文单词",
-          translation: "n. 简短中文翻译",
-          definitions: [
-            { pos: "n.", meaning: "名词含义" }
-          ],
-          relatedForms: ["过去式", "过去分词", "复数形式"],
-          example: "英文例句",
-          exampleTranslation: "例句翻译",
-          distractorsZh: ["v. 干扰项1 (长度需与正确答案相似)", "adj. 干扰项2", "n. 干扰项3"],
-          distractorsEn: ["distraction1", "distraction2", "distraction3"]
-        }
-      ]
-    };
-  } else {
-    // Gemini schema format - try to import Type dynamically
-    try {
-      const { Type } = require('@google/genai');
-      responseSchema = {
-        type: Type.ARRAY,
+  const responseSchema = {
+    type: "OBJECT",
+    properties: {
+      words: {
+        type: "ARRAY",
         items: {
-          type: Type.OBJECT,
+          type: "OBJECT",
           properties: {
-            word: { type: Type.STRING, description: "英文单词" },
-            translation: { type: Type.STRING, description: "简短中文翻译（必须包含词性，如 n. 苹果）" },
+            word: { type: "STRING", description: "英文单词" },
+            translation: { type: "STRING", description: "简短中文翻译（必须包含词性，如 n. 苹果）" },
             definitions: {
-              type: Type.ARRAY,
+              type: "ARRAY",
               items: {
-                type: Type.OBJECT,
+                type: "OBJECT",
                 properties: {
-                  pos: { type: Type.STRING, description: "词性缩写，如 n., v., adj." },
-                  meaning: { type: Type.STRING, description: "该词性下的中文意思" }
+                  pos: { type: "STRING", description: "词性缩写，如 n., v., adj." },
+                  meaning: { type: "STRING", description: "该词性下的中文意思" }
                 },
                 required: ["pos", "meaning"]
               },
               description: "单词的详细词性和多重意思（必须使用中文解释）"
             },
             relatedForms: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
+              type: "ARRAY",
+              items: { type: "STRING" },
               description: "相关词汇变形（如过去式、过去分词、复数、副词形式等，例如 'went (过去式)'）"
             },
-            example: { type: Type.STRING, description: "英文例句" },
-            exampleTranslation: { type: Type.STRING, description: "例句中文翻译" },
-            distractorsZh: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3个中文干扰项（必须包含词性，如 v. 跑。长度和格式必须与正确答案相似，避免过短）" },
-            distractorsEn: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3个英文干扰项" },
+            example: { type: "STRING", description: "英文例句" },
+            exampleTranslation: { type: "STRING", description: "例句中文翻译" },
+            distractorsZh: { type: "ARRAY", items: { type: "STRING" }, description: "3个中文干扰项（必须包含词性，如 v. 跑。长度和格式必须与正确答案相似，避免过短）" },
+            distractorsEn: { type: "ARRAY", items: { type: "STRING" }, description: "3个英文干扰项" },
           },
           required: ["word", "translation", "definitions", "relatedForms", "example", "exampleTranslation", "distractorsZh", "distractorsEn"]
         }
-      };
-    } catch (error) {
-      throw new Error('Gemini SDK is not installed. Please install it with: npm install @google/genai');
-    }
-  }
+      }
+    },
+    required: ["words"]
+  };
 
   const response = await aiService.generateContent({
     prompt,
@@ -172,16 +149,13 @@ ${words}`;
 
   if (!response.text) throw new Error("AI 未返回结果");
 
-  // Parse response
-  let parsedData: WordData[];
-  if (provider === 'openai') {
+  try {
     const jsonResponse = JSON.parse(response.text);
-    parsedData = jsonResponse.words || [];
-  } else {
-    parsedData = JSON.parse(response.text) as WordData[];
+    return jsonResponse.words || [];
+  } catch (e) {
+    console.error("Failed to parse AI response:", response.text);
+    throw new Error("AI 返回的数据格式有误，请重试。");
   }
-
-  return parsedData;
 };
 
 // --- Components ---

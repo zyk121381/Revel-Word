@@ -50,7 +50,11 @@ npm install
 cp .env.local.example .env.local
 ```
 
-在 `.env.local` 中配置你的 API 密钥：
+根据你的使用场景选择配置方式：
+
+#### 方式一：开发/学习环境（客户端模式）
+
+适合本地开发、测试学习等场景，API 密钥会暴露在浏览器端：
 
 ```env
 # AI 提供商选择：openai 或 gemini
@@ -66,6 +70,31 @@ NEXT_PUBLIC_GEMINI_API_KEY="your-gemini-api-key"
 NEXT_PUBLIC_GEMINI_MODEL="gemini-3.1-pro-preview"
 ```
 
+> ⚠️ **注意**：此模式会将 API 密钥暴露到客户端，仅适合个人学习测试。
+
+#### 方式二：生产环境（服务端模式，推荐）
+
+适合部署到服务器，API 密钥只在服务端使用，更安全：
+
+```env
+# AI 提供商选择：openai 或 gemini
+AI_PROVIDER="openai"
+
+# OpenAI API 配置
+OPENAI_API_KEY="your-openai-api-key"
+OPENAI_API_BASE="https://api.openai.com/v1"
+OPENAI_MODEL="gpt-4o-mini"
+
+# Gemini API 配置（可选）
+GEMINI_API_KEY="your-gemini-api-key"
+GEMINI_MODEL="gemini-3.1-pro-preview"
+
+# 应用 URL（可选）
+APP_URL="http://localhost:3000"
+```
+
+> ✅ **推荐**：此模式下 API 密钥不会暴露到客户端，安全性更高。
+
 > 💡 OpenAI API 版本支持兼容 OpenAI 的第三方服务，如 OpenRouter、DeepSeek、通义千问、Moonshot 等
 
 3. 启动开发服务器
@@ -76,12 +105,24 @@ npm run dev
 
 4. 打开浏览器访问 `http://localhost:3000`
 
-### 生产构建
+### 生产构建与部署
+
+构建项目：
 
 ```bash
 npm run build
-npm run start
 ```
+
+启动生产服务器：
+
+```bash
+npm start
+```
+
+**部署注意事项**：
+- 在服务器上配置环境变量时，参考上方"安装步骤"中的"方式二：生产环境（服务端模式）"
+- 确保使用不带 `NEXT_PUBLIC_` 前缀的变量（如 `OPENAI_API_KEY`），以确保 API 密钥安全
+- 建议使用 PM2 或 systemd 等工具管理 Node.js 进程
 
 ## 📖 使用方法
 
@@ -104,6 +145,8 @@ npm run start
 
 ## 🔧 环境变量说明
 
+### 开发/学习环境（客户端模式）
+
 | 变量名 | 说明 | 必需 | 默认值 |
 |--------|------|------|--------|
 | `NEXT_PUBLIC_AI_PROVIDER` | AI 提供商（openai/gemini） | ❌ | openai |
@@ -112,6 +155,22 @@ npm run start
 | `NEXT_PUBLIC_OPENAI_MODEL` | 使用的 OpenAI 模型 | ❌ | gpt-4o-mini |
 | `NEXT_PUBLIC_GEMINI_API_KEY` | Gemini API 密钥 | 二选一 | - |
 | `NEXT_PUBLIC_GEMINI_MODEL` | 使用的 Gemini 模型 | ❌ | gemini-3.1-pro-preview |
+
+### 生产环境（服务端模式，更安全）
+
+| 变量名 | 说明 | 必需 | 默认值 |
+|--------|------|------|--------|
+| `AI_PROVIDER` | AI 提供商（openai/gemini） | ❌ | openai |
+| `OPENAI_API_KEY` | OpenAI API 密钥 | 二选一 | - |
+| `OPENAI_API_BASE` | OpenAI API 基础 URL | ❌ | https://api.openai.com/v1 |
+| `OPENAI_MODEL` | 使用的 OpenAI 模型 | ❌ | gpt-4o-mini |
+| `GEMINI_API_KEY` | Gemini API 密钥 | 二选一 | - |
+| `GEMINI_MODEL` | 使用的 Gemini 模型 | ❌ | gemini-3.1-pro-preview |
+| `APP_URL` | 应用部署的 URL | ❌ | http://localhost:3000 |
+
+**安全说明**：
+- 客户端模式（`NEXT_PUBLIC_*`）：变量会暴露到浏览器，仅适合本地开发或学习测试
+- 服务端模式（不带前缀）：变量只在服务器端使用，不会暴露给客户端，适合生产部署
 
 ### 支持的模型
 
@@ -145,16 +204,24 @@ npm run start
 ```
 revelation-ai-studio-applet/
 ├── app/                    # Next.js 应用目录
+│   ├── api/                # API 路由（服务端）
+│   │   ├── chat/           # 聊天 API 端点
+│   │   └── generate/       # 内容生成 API 端点
 │   ├── layout.tsx          # 根布局
-│   ├── page.tsx            # 主应用页面
+│   ├── page.tsx            # 主应用页面（客户端）
 │   └── globals.css         # 全局样式
 ├── lib/
-│   ├── ai-service.ts       # AI 服务抽象层
+│   ├── ai-server.ts        # 服务端 AI 服务抽象层
+│   ├── ai-service.ts       # 客户端 AI 服务封装
+│   ├── rate-limit.ts       # API 速率限制
 │   └── utils.ts            # 工具函数
 ├── hooks/
 │   └── use-mobile.ts       # 移动端检测 Hook
+├── components/             # React 组件
+│   ├── ThemeProvider.tsx   # 主题提供者
+│   └── ThemeToggle.tsx     # 主题切换按钮
 ├── .env.local.example      # 环境变量示例
-├── MIGRATION.md            # 迁移指南
+├── .env.local              # 本地环境变量（不提交到 Git）
 └── package.json            # 项目配置
 ```
 
@@ -164,9 +231,9 @@ revelation-ai-studio-applet/
 
 项目采用科学的间隔重复算法优化记忆效果：
 
-1. **初始学习** - 每个单词需完成 6 种题型训练
+1. **初始学习** - 每个单词需完成 3-4 种题型训练
 2. **答对策略** - 延迟 2-3 步后再次复习
-3. **答错策略** - 立即复习
+3. **答错策略** - 立即复习，并将之前未训练的题型自动添加到答题列表中
 4. **掌握标准** - 完成所有题型且准确率达到要求
 
 ### 进度追踪
