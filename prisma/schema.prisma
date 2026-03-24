@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  username  String     @unique
+  password  String
+  role      String     @default("USER")
+  avatarUrl String?
+  createdAt DateTime   @default(now())
+  progress  Progress[]
+  sessions  PracticeSession[]
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  parentId  String?
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Category[] @relation("CategoryHierarchy")
+  units     WordUnit[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model WordUnit {
+  id         String     @id @default(cuid())
+  name       String
+  categoryId String?
+  category   Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt  DateTime   @default(now())
+  words      Word[]
+  progress   Progress[]
+  sessions   PracticeSession[]
+}
+
+model Word {
+  id        String   @id @default(cuid())
+  unitId    String
+  unit      WordUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  word      String
+  data      Json
+  createdAt DateTime @default(now())
+}
+
+model Progress {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitId    String?
+  unit      WordUnit? @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  data      Json
+  updatedAt DateTime  @updatedAt
+  isReview  Boolean   @default(false)
+}
+
+model PracticeSession {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitId      String?
+  unit        WordUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  isReview    Boolean   @default(false)
+  startTime   DateTime  @default(now())
+  endTime     DateTime?
+  status      String    @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, ABANDONED
+  events      Json      // [{ type: 'START', time: '...' }, { type: 'PAUSE', time: '...' }, { type: 'RESUME', time: '...' }, { type: 'END', time: '...' }]
+  stats       Json?     // Overall accuracy
+  wordStats   Json?     // Per-word error counts
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
