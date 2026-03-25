@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { getCategories, getUnits, getProgress, getReviewWords, getUnitWords } from '@/app/actions';
-import { BookOpen, Play, RefreshCw, Loader2, Folder, FileText, ChevronRight, ChevronDown } from 'lucide-react';
+import { getCategories, getUnits, getProgress, getReviewWords, getUnitWords, getMySessions } from '@/app/actions';
+import { BookOpen, Play, RefreshCw, Loader2, Folder, FileText, ChevronRight, ChevronDown, Clock, Activity, CheckCircle2, PauseCircle } from 'lucide-react';
 
-export function Dashboard({ onStartExercise }: { onStartExercise: (words: any[], unitId: string | null, isReview: boolean, savedProgress?: any) => void }) {
+export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExercise: (words: any[], unitId: string | null, isReview: boolean, savedProgress?: any, contextInfo?: any) => void, onUserPanelClick: () => void }) {
   const [categories, setCategories] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
   const [reviewCount, setReviewCount] = useState<number>(10);
   const [loading, setLoading] = useState(true);
@@ -12,9 +13,10 @@ export function Dashboard({ onStartExercise }: { onStartExercise: (words: any[],
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    Promise.all([getCategories(), getUnits()]).then(([cats, uns]) => {
+    Promise.all([getCategories(), getUnits(), getMySessions()]).then(([cats, uns, sess]) => {
       setCategories(cats);
       setUnits(uns);
+      setSessions(sess);
       setLoading(false);
     });
   }, []);
@@ -28,18 +30,42 @@ export function Dashboard({ onStartExercise }: { onStartExercise: (words: any[],
     });
   };
 
+  const getFullUnitName = (unitId: string) => {
+    const unit = units.find(u => u.id === unitId);
+    if (!unit) return '未知单元';
+    let path = [unit.name];
+    let currentCat = categories.find(c => c.id === unit.categoryId);
+    while (currentCat) {
+      path.unshift(currentCat.name);
+      currentCat = categories.find(c => c.id === currentCat?.parentId);
+    }
+    return path.join(' - ');
+  };
+
   const handleStartUnit = async (unitId: string) => {
     setStarting(true);
     try {
+      const unit = units.find(u => u.id === unitId);
+      const fullPath = getFullUnitName(unitId);
+      const parts = fullPath.split(' - ');
+      const title = parts.pop() || '未知单元';
+      const subtitle = parts.length > 0 ? parts.join(' - ') : '未分类';
+      
+      const contextInfo = {
+        title,
+        subtitle,
+        type: 'LEARN'
+      };
+
       const savedProgress = await getProgress(unitId, false);
       if (savedProgress) {
         if (confirm('发现保存的学习进度，是否继续上次的学习？')) {
-          onStartExercise([], unitId, false, savedProgress);
+          onStartExercise([], unitId, false, savedProgress, contextInfo);
           return;
         }
       }
       const words = await getUnitWords(unitId);
-      onStartExercise(words, unitId, false);
+      onStartExercise(words, unitId, false, undefined, { ...contextInfo, totalWords: words.length });
     } finally {
       setStarting(false);
     }
@@ -49,16 +75,24 @@ export function Dashboard({ onStartExercise }: { onStartExercise: (words: any[],
     if (selectedUnits.length === 0) return alert('请至少选择一个单元进行复习');
     setStarting(true);
     try {
+      const selectedUnitNames = selectedUnits.map(id => getFullUnitName(id));
+      const contextInfo = {
+        title: '智能复习',
+        subtitle: `复习 ${selectedUnits.length} 个单元`,
+        details: selectedUnitNames.join(', '),
+        type: 'REVIEW'
+      };
+
       const savedProgress = await getProgress(null, true);
       if (savedProgress) {
         if (confirm('发现保存的复习进度，是否继续上次的复习？')) {
-          onStartExercise([], null, true, savedProgress);
+          onStartExercise([], null, true, savedProgress, contextInfo);
           return;
         }
       }
       const words = await getReviewWords(selectedUnits, reviewCount);
       if (words.length === 0) return alert('所选单元中没有单词');
-      onStartExercise(words, null, true);
+      onStartExercise(words, null, true, undefined, { ...contextInfo, totalWords: words.length });
     } finally {
       setStarting(false);
     }
@@ -75,26 +109,26 @@ export function Dashboard({ onStartExercise }: { onStartExercise: (words: any[],
     if (children.length === 0) return null;
 
     return (
-      <div className={`space-y-4 ${depth > 0 ? 'ml-8 mt-4 border-l-2 border-indigo-100 dark:border-indigo-900/50 pl-6 relative' : ''}`}>
+      <div className={`space-y-3 ${depth > 0 ? 'ml-6 mt-3 border-l-2 border-indigo-100 dark:border-indigo-900/50 pl-4 relative' : ''}`}>
         {children.map(cat => {
           const isExpanded = expandedCats.has(cat.id);
           return (
-            <div key={cat.id} className="space-y-4 relative">
+            <div key={cat.id} className="space-y-3 relative">
               {depth > 0 && (
-                <div className="absolute -left-6 top-7 w-6 h-0.5 bg-indigo-100 dark:bg-indigo-900/50"></div>
+                <div className="absolute -left-4 top-5 w-4 h-0.5 bg-indigo-100 dark:bg-indigo-900/50"></div>
               )}
               <button 
                 onClick={() => toggleCat(cat.id)}
-                className="w-full flex items-center justify-between bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-5 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
+                className="w-full flex items-center justify-between bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-3.5 rounded-xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
               >
-                <div className="flex items-center gap-4 font-black text-slate-800 dark:text-slate-100 text-xl">
-                  <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-500 group-hover:scale-110 transition-transform">
-                    <Folder className="w-6 h-6 fill-amber-500/20" /> 
+                <div className="flex items-center gap-3 font-bold text-slate-800 dark:text-slate-100 text-lg">
+                  <div className="p-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-amber-500 group-hover:scale-110 transition-transform">
+                    <Folder className="w-5 h-5 fill-amber-500/20" /> 
                   </div>
                   {cat.name}
                 </div>
-                <div className={`p-2 rounded-full transition-colors ${isExpanded ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500' : 'text-slate-400 group-hover:bg-slate-100 dark:group-hover:bg-slate-800'}`}>
-                  {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                <div className={`p-1.5 rounded-full transition-colors ${isExpanded ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500' : 'text-slate-400 group-hover:bg-slate-100 dark:group-hover:bg-slate-800'}`}>
+                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </div>
               </button>
               
@@ -102,25 +136,23 @@ export function Dashboard({ onStartExercise }: { onStartExercise: (words: any[],
                 <div className="animate-in slide-in-from-top-2 fade-in duration-200">
                   {/* Units in this category */}
                   {cat.units?.length > 0 && (
-                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 ml-8 mt-4">
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 ml-6 mt-3">
                       {cat.units.map((u: any) => (
-                        <div key={u.id} className="p-6 border border-slate-200/50 dark:border-slate-700/50 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col justify-between hover:shadow-xl hover:shadow-indigo-500/10 transition-all group relative overflow-hidden">
-                          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl -mr-8 -mt-8 pointer-events-none group-hover:bg-indigo-500/10 transition-colors"></div>
-                          <div className="relative z-10">
-                            <h3 className="font-black text-lg flex items-center gap-3 text-slate-800 dark:text-slate-100 mb-2">
-                              <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl text-indigo-500">
-                                <FileText className="w-4 h-4" />
-                              </div>
-                              {u.name}
+                        <div key={u.id} className="p-4 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex flex-col justify-between hover:shadow-lg hover:shadow-indigo-500/10 transition-all group relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/5 rounded-full blur-xl -mr-6 -mt-6 pointer-events-none group-hover:bg-indigo-500/10 transition-colors"></div>
+                          <div className="relative z-10 flex items-start justify-between mb-4">
+                            <h3 className="font-bold text-base flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                              <FileText className="w-4 h-4 text-indigo-500" />
+                              <span className="truncate">{u.name}</span>
                             </h3>
-                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-6 mt-2 bg-slate-100 dark:bg-slate-800 inline-block px-2 py-1 rounded-md">{u._count?.words || 0} 个单词</p>
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md whitespace-nowrap">{u._count?.words || 0} 词</span>
                           </div>
                           <button
                             onClick={() => handleStartUnit(u.id)}
                             disabled={starting}
-                            className="relative z-10 w-full py-3 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-xl font-bold hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 active:scale-95 group/btn"
+                            className="relative z-10 w-full py-2 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-lg font-bold text-sm hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 transition-all flex items-center justify-center gap-1.5 active:scale-95 group/btn"
                           >
-                            <Play className="w-4 h-4 fill-current transition-transform group-hover/btn:scale-110" /> 开始学习
+                            <Play className="w-3.5 h-3.5 fill-current transition-transform group-hover/btn:scale-110" /> 开始
                           </button>
                         </div>
                       ))}
@@ -139,9 +171,64 @@ export function Dashboard({ onStartExercise }: { onStartExercise: (words: any[],
   if (loading) return <div className="flex justify-center mt-24"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>;
 
   const rootUnits = units.filter(u => !u.categoryId);
+  const unfinishedSessions = sessions.filter(s => s.status === 'PAUSED');
 
   return (
     <div className="max-w-6xl mx-auto mt-12 px-4 space-y-12 pb-24 relative z-10">
+      {/* Unfinished Sessions Section */}
+      {unfinishedSessions.length > 0 && (
+        <section>
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-3.5 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl shadow-lg shadow-amber-500/20">
+              <Clock className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+              继续学习
+            </h2>
+          </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {unfinishedSessions.map(s => {
+              const progress = s.stats ? Math.round((s.stats.correct + s.stats.incorrect) / s.stats.total * 100) : 0;
+              return (
+                <div key={s.id} className="p-6 border border-slate-200/50 dark:border-slate-700/50 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col justify-between hover:shadow-2xl hover:shadow-amber-500/10 transition-all group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none group-hover:bg-amber-500/10 transition-colors"></div>
+                  <div className="relative z-10">
+                    <h3 className="font-black text-xl flex items-center gap-3 text-slate-800 dark:text-slate-100 mb-2">
+                      <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-xl text-amber-500">
+                        {s.isReview ? <RefreshCw className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
+                      </div>
+                      {s.isReview ? '智能复习' : s.unit?.name || '未知单元'}
+                    </h3>
+                    <div className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-2 mt-2 bg-slate-100 dark:bg-slate-800 inline-block px-3 py-1 rounded-lg">
+                      {s.unit ? `${getFullUnitName(s.unit.id).split(' - ').slice(0, -1).join(' - ')} / ` : ''}{s.isReview ? '复习' : '学习'}
+                    </div>
+                    <div className="text-xs text-slate-400 mb-6">
+                      开始于: {new Date(s.startTime).toLocaleString()}
+                    </div>
+                    <div className="mb-6">
+                      <div className="flex justify-between text-xs font-bold mb-1 text-slate-500">
+                        <span>进度</span>
+                        <span>{progress}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div className="bg-amber-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => s.isReview ? handleStartReview() : handleStartUnit(s.unitId)}
+                    disabled={starting}
+                    className="relative z-10 w-full py-3.5 bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-2xl font-bold hover:bg-amber-600 hover:text-white dark:hover:bg-amber-500 transition-all flex items-center justify-center gap-2 active:scale-95 group/btn"
+                  >
+                    <Play className="w-5 h-5 fill-current transition-transform group-hover/btn:scale-110" /> 继续
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Learning Section */}
       <section>
         <div className="flex items-center gap-4 mb-8">
@@ -218,19 +305,26 @@ export function Dashboard({ onStartExercise }: { onStartExercise: (words: any[],
               选择要复习的单元
             </label>
             <div className="flex flex-wrap gap-3">
-              {units.map(u => (
-                <button
-                  key={u.id}
-                  onClick={() => toggleUnitSelection(u.id)}
-                  className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all border-2 ${
-                    selectedUnits.includes(u.id) 
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/50 dark:text-emerald-300 shadow-md shadow-emerald-500/10 scale-105' 
-                      : 'bg-white dark:bg-slate-900 border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-sm'
-                  }`}
-                >
-                  {u.name}
-                </button>
-              ))}
+              {units.map(u => {
+                const fullPath = getFullUnitName(u.id);
+                const parts = fullPath.split(' - ');
+                const name = parts.pop();
+                const path = parts.join(' - ');
+                return (
+                  <button
+                    key={u.id}
+                    onClick={() => toggleUnitSelection(u.id)}
+                    className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all border-2 flex flex-col items-start ${
+                      selectedUnits.includes(u.id) 
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/50 dark:text-emerald-300 shadow-md shadow-emerald-500/10 scale-105' 
+                        : 'bg-white dark:bg-slate-900 border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-sm'
+                    }`}
+                  >
+                    {path && <span className="text-xs opacity-70 mb-1">{path}</span>}
+                    <span>{name}</span>
+                  </button>
+                );
+              })}
               {units.length === 0 && <span className="text-slate-400 text-sm font-medium py-2">暂无可复习的单元</span>}
             </div>
           </div>
@@ -262,6 +356,7 @@ export function Dashboard({ onStartExercise }: { onStartExercise: (words: any[],
           </button>
         </div>
       </section>
+
     </div>
   );
 }

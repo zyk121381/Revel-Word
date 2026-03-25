@@ -163,7 +163,10 @@ export async function updateWord(id: string, data: any) {
   if (!session || session.role !== 'ADMIN') return;
   await prisma.word.update({
     where: { id },
-    data: { data }
+    data: { 
+      word: data.word,
+      data 
+    }
   });
 }
 
@@ -183,6 +186,7 @@ export async function addWordToUnit(unitId: string, wordData: any) {
   await prisma.word.create({
     data: {
       unitId,
+      word: wordData.word,
       data: wordData
     }
   });
@@ -277,7 +281,7 @@ export async function getUnitWords(unitId: string) {
 }
 
 // Session Tracking Actions
-export async function startSession(unitId: string | null, isReview: boolean) {
+export async function startSession(unitId: string | null, isReview: boolean, context?: any) {
   if (!prisma) return null;
   const session = await getSessionData();
   if (!session || session.id === 'admin') return null;
@@ -288,13 +292,14 @@ export async function startSession(unitId: string | null, isReview: boolean) {
       unitId,
       isReview,
       status: 'IN_PROGRESS',
-      events: [{ type: 'START', time: new Date().toISOString() }]
+      events: [{ type: 'START', time: new Date().toISOString() }],
+      context: context || null
     }
   });
   return practiceSession.id;
 }
 
-export async function pauseSession(sessionId: string) {
+export async function pauseSession(sessionId: string, stats?: any, wordStats?: any) {
   if (!prisma) return;
   const session = await getSessionData();
   if (!session || session.id === 'admin') return;
@@ -305,9 +310,13 @@ export async function pauseSession(sessionId: string) {
   const events: any[] = Array.isArray(practiceSession.events) ? practiceSession.events : [];
   events.push({ type: 'PAUSE', time: new Date().toISOString() });
 
+  const dataToUpdate: any = { events, status: 'PAUSED' };
+  if (stats) dataToUpdate.stats = stats;
+  if (wordStats) dataToUpdate.wordStats = wordStats;
+
   await prisma.practiceSession.update({
     where: { id: sessionId },
-    data: { events, status: 'PAUSED' }
+    data: dataToUpdate
   });
 }
 
@@ -359,7 +368,21 @@ export async function getUserSessions(userId: string) {
   return await prisma.practiceSession.findMany({
     where: { userId },
     include: {
-      unit: { select: { name: true } }
+      unit: { select: { name: true, categoryId: true, category: { select: { name: true } } } }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
+export async function getMySessions() {
+  if (!prisma) return [];
+  const session = await getSessionData();
+  if (!session) throw new Error('Unauthorized');
+
+  return await prisma.practiceSession.findMany({
+    where: { userId: session.id },
+    include: {
+      unit: { select: { name: true, categoryId: true, category: { select: { name: true } } } }
     },
     orderBy: { createdAt: 'desc' }
   });

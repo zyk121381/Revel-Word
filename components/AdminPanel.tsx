@@ -6,6 +6,7 @@ import {
   getUserSessions, getUnitWords, updateWord, deleteWord, addWordToUnit
 } from '@/app/actions';
 import { analyzeWords } from '@/lib/analyze';
+import { UnitWordsManager } from './UnitWordsManager';
 import { 
   Trash2, Plus, Loader2, Users, FolderTree, Activity, 
   ChevronRight, ChevronDown, Edit2, Image as ImageIcon,
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export function AdminPanel({ onBack }: { onBack: () => void }) {
-  const [activeTab, setActiveTab] = useState<'users' | 'content'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'content' | 'tree'>('users');
   const [users, setUsers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
@@ -78,6 +79,12 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
           >
             <FolderTree className={`w-6 h-6 ${activeTab === 'content' ? 'text-indigo-200' : 'text-slate-400'}`} /> 内容管理
           </button>
+          <button 
+            onClick={() => setActiveTab('tree')}
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all duration-300 ${activeTab === 'tree' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/30 scale-[1.02]' : 'hover:bg-slate-100 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:scale-[1.02]'}`}
+          >
+            <Folder className={`w-6 h-6 ${activeTab === 'tree' ? 'text-indigo-200' : 'text-slate-400'}`} /> 文件树
+          </button>
         </nav>
       </div>
 
@@ -108,6 +115,10 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
           {activeTab === 'content' && (
             <ContentManager categories={categories} units={units} onReload={loadData} setError={setError} />
           )}
+
+          {activeTab === 'tree' && (
+            <TreeManager categories={categories} units={units} onReload={loadData} setError={setError} />
+          )}
         </div>
       </div>
     </div>
@@ -119,6 +130,11 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
   const [newPassword, setNewPassword] = useState('');
   const [newAvatar, setNewAvatar] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editUsername, setEditUsername] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editAvatar, setEditAvatar] = useState('');
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,6 +148,31 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await updateUser(editingUser.id, {
+        username: editUsername,
+        password: editPassword || undefined,
+        avatarUrl: editAvatar || undefined
+      });
+      setEditingUser(null);
+      await onReload();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEdit = (user: any) => {
+    setEditingUser(user);
+    setEditUsername(user.username);
+    setEditPassword('');
+    setEditAvatar(user.avatarUrl || '');
   };
 
   const handleDelete = async (id: string) => {
@@ -232,6 +273,9 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
                   </td>
                   <td className="p-6 text-slate-500 font-medium">{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="p-6 text-right space-x-3">
+                    <button onClick={() => startEdit(u)} className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-blue-500 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:border-blue-800 rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95">
+                      <Edit2 className="w-5 h-5" />
+                    </button>
                     <button onClick={() => onViewUser(u)} className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 dark:text-indigo-400 dark:hover:bg-indigo-900/30 dark:hover:border-indigo-800 rounded-xl transition-all font-bold text-sm inline-flex items-center gap-2 shadow-sm hover:shadow-md active:scale-95">
                       <Activity className="w-4 h-4" /> 记录
                     </button>
@@ -247,6 +291,43 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
           </table>
         </div>
       </div>
+
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800">
+            <h3 className="text-2xl font-black mb-6 text-slate-800 dark:text-slate-100">编辑用户</h3>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <input type="text" placeholder="用户名" value={editUsername} onChange={e => setEditUsername(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-950 focus:border-indigo-500 outline-none" required />
+              <input type="password" placeholder="新密码 (留空则不修改)" value={editPassword} onChange={e => setEditPassword(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-950 focus:border-indigo-500 outline-none" />
+              <div className="relative flex items-center">
+                <input type="file" accept="image/*" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => setEditAvatar(reader.result as string);
+                    reader.readAsDataURL(file);
+                  }
+                }} className="hidden" id="edit-avatar-upload" />
+                <label htmlFor="edit-avatar-upload" className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 focus:border-indigo-500 outline-none cursor-pointer flex items-center justify-between">
+                  <span className="truncate">{editAvatar ? '已选择头像' : '上传新头像'}</span>
+                  <ImageIcon className="w-5 h-5" />
+                </label>
+                {editAvatar && (
+                  <div className="absolute right-14 w-8 h-8 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 shadow-sm">
+                    <img src={editAvatar} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setEditingUser(null)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl font-bold transition-all">取消</button>
+                <button type="submit" disabled={loading} className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-2">
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : '保存修改'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -268,7 +349,7 @@ function UserDetails({ user, sessions, loading, onBack }: any) {
             </div>
           )}
         </div>
-        <div className="relative z-10">
+        <div className="relative z-10 flex-1">
           <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight mb-1">{user.username} 的练习记录</h2>
           <div className="flex items-center gap-3">
             <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold">
@@ -277,6 +358,17 @@ function UserDetails({ user, sessions, loading, onBack }: any) {
             <p className="text-slate-500 font-medium text-sm">注册于 {new Date(user.createdAt).toLocaleDateString()}</p>
           </div>
         </div>
+        <button onClick={() => {
+          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sessions, null, 2));
+          const downloadAnchorNode = document.createElement('a');
+          downloadAnchorNode.setAttribute("href", dataStr);
+          downloadAnchorNode.setAttribute("download", `user_${user.username}_sessions.json`);
+          document.body.appendChild(downloadAnchorNode);
+          downloadAnchorNode.click();
+          downloadAnchorNode.remove();
+        }} className="p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-2xl transition-all shadow-sm hover:shadow-md active:scale-95 relative z-10 font-bold text-sm flex items-center gap-2">
+          导出 JSON
+        </button>
       </div>
 
       {loading ? (
@@ -336,18 +428,18 @@ function UserDetails({ user, sessions, loading, onBack }: any) {
               </div>
 
               {/* Word Stats */}
-              {s.wordStats && Object.keys(s.wordStats).length > 0 && (
+              {s.wordStats && Object.values(s.wordStats).some((stat: any) => stat.incorrect > 0) && (
                 <div className="pt-6 border-t border-slate-200/50 dark:border-slate-800/50 relative z-10">
                   <h5 className="text-sm font-bold mb-3 text-slate-800 dark:text-slate-200 flex items-center gap-2">
                     <XCircle className="w-4 h-4 text-rose-400" /> 单词错误统计
                   </h5>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(s.wordStats).map(([word, errors]: any) => (
-                      errors > 0 && (
+                    {Object.entries(s.wordStats).map(([word, stats]: any) => (
+                      stats.incorrect > 0 && (
                         <div key={word} className="text-sm font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 px-3 py-1.5 rounded-xl border border-rose-200/50 dark:border-rose-500/20 flex items-center gap-2 shadow-sm">
                           <span className="font-bold">{word}</span>
                           <span className="w-px h-3 bg-rose-200 dark:bg-rose-500/30"></span>
-                          <span>错 {errors} 次</span>
+                          <span>错 {stats.incorrect} 次</span>
                         </div>
                       )
                     ))}
@@ -370,6 +462,11 @@ function ContentManager({ categories, units, onReload, setError }: any) {
   const [newUnitWords, setNewUnitWords] = useState('');
   const [unitCatId, setUnitCatId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState<any>(null);
+
+  if (selectedUnit) {
+    return <UnitWordsManager unit={selectedUnit} onBack={() => setSelectedUnit(null)} setError={setError} />;
+  }
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -436,7 +533,10 @@ function ContentManager({ categories, units, onReload, setError }: any) {
                         {u._count?.words || 0} 词
                       </span>
                     </div>
-                    <button onClick={() => handleDeleteUnit(u.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2 rounded-lg transition-all opacity-0 group-hover/unit:opacity-100 focus:opacity-100"><Trash2 className="w-4 h-4" /></button>
+                    <div className="flex items-center gap-2 opacity-0 group-hover/unit:opacity-100 focus-within:opacity-100 transition-all">
+                      <button onClick={() => setSelectedUnit(u)} className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-2 rounded-lg transition-all"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleDeleteUnit(u.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -453,103 +553,174 @@ function ContentManager({ categories, units, onReload, setError }: any) {
   const rootUnits = units.filter((u: any) => !u.categoryId);
 
   return (
-    <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 pb-20">
-      {/* Forms Column */}
-      <div className="xl:col-span-4 space-y-6">
-        {/* Add Category */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-amber-500/10 transition-colors"></div>
-          <h3 className="text-xl font-black mb-6 flex items-center gap-3 relative z-10 text-slate-800 dark:text-slate-100">
-            <div className="p-2.5 bg-amber-100 dark:bg-amber-900/50 rounded-xl text-amber-600 dark:text-amber-400">
-              <FolderTree className="w-5 h-5" />
-            </div>
-            新建分类
-          </h3>
-          <form onSubmit={handleAddCategory} className="space-y-4 relative z-10">
-            <input type="text" placeholder="分类名称" value={newCatName} onChange={e => setNewCatName(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all font-medium placeholder:text-slate-400" required />
-            <div className="relative">
-              <select value={parentCatId} onChange={e => setParentCatId(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all font-medium text-slate-700 dark:text-slate-300 appearance-none">
-                <option value="">作为根分类</option>
-                {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-            </div>
-            <button type="submit" className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-amber-500/20 hover:shadow-amber-500/40">添加分类</button>
-          </form>
-        </div>
-
-        {/* Add Unit */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-indigo-500/10 transition-colors"></div>
-          <h3 className="text-xl font-black mb-6 flex items-center gap-3 relative z-10 text-slate-800 dark:text-slate-100">
-            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl text-indigo-600 dark:text-indigo-400">
-              <FileText className="w-5 h-5" />
-            </div>
-            新建单元
-          </h3>
-          <form onSubmit={handleAddUnit} className="space-y-4 relative z-10">
-            <input type="text" placeholder="单元名称" value={newUnitName} onChange={e => setNewUnitName(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium placeholder:text-slate-400" required />
-            <div className="relative">
-              <select value={unitCatId} onChange={e => setUnitCatId(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-700 dark:text-slate-300 appearance-none">
-                <option value="">无分类 (根目录)</option>
-                {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-            </div>
-            <textarea placeholder="输入单词列表 (换行分隔)..." value={newUnitWords} onChange={e => setNewUnitWords(e.target.value)} className="w-full h-40 p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium placeholder:text-slate-400 resize-none leading-relaxed" required />
-            <button type="submit" disabled={loading} className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40">
-              {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'AI 智能出题并保存'}
-            </button>
-          </form>
-        </div>
+    <div className="max-w-3xl mx-auto space-y-6 pb-20">
+      {/* Add Category */}
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-amber-500/10 transition-colors"></div>
+        <h3 className="text-xl font-black mb-6 flex items-center gap-3 relative z-10 text-slate-800 dark:text-slate-100">
+          <div className="p-2.5 bg-amber-100 dark:bg-amber-900/50 rounded-xl text-amber-600 dark:text-amber-400">
+            <FolderTree className="w-5 h-5" />
+          </div>
+          新建分类
+        </h3>
+        <form onSubmit={handleAddCategory} className="space-y-4 relative z-10">
+          <input type="text" placeholder="分类名称" value={newCatName} onChange={e => setNewCatName(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all font-medium placeholder:text-slate-400" required />
+          <div className="relative">
+            <select value={parentCatId} onChange={e => setParentCatId(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all font-medium text-slate-700 dark:text-slate-300 appearance-none">
+              <option value="">作为根分类</option>
+              {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+          </div>
+          <button type="submit" className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-amber-500/20 hover:shadow-amber-500/40">添加分类</button>
+        </form>
       </div>
 
-      {/* Tree View Column */}
-      <div className="xl:col-span-8">
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 min-h-[800px] relative overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
-          <h3 className="text-2xl font-black mb-8 text-slate-800 dark:text-slate-100 relative z-10 flex items-center gap-3">
-            <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400">
-              <FolderTree className="w-6 h-6" />
+      {/* Add Unit */}
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-indigo-500/10 transition-colors"></div>
+        <h3 className="text-xl font-black mb-6 flex items-center gap-3 relative z-10 text-slate-800 dark:text-slate-100">
+          <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl text-indigo-600 dark:text-indigo-400">
+            <FileText className="w-5 h-5" />
+          </div>
+          新建单元
+        </h3>
+        <form onSubmit={handleAddUnit} className="space-y-4 relative z-10">
+          <input type="text" placeholder="单元名称" value={newUnitName} onChange={e => setNewUnitName(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium placeholder:text-slate-400" required />
+          <div className="relative">
+            <select value={unitCatId} onChange={e => setUnitCatId(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-700 dark:text-slate-300 appearance-none">
+              <option value="">无分类 (根目录)</option>
+              {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+          </div>
+          <textarea placeholder="输入单词列表 (换行分隔)..." value={newUnitWords} onChange={e => setNewUnitWords(e.target.value)} className="w-full h-40 p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium placeholder:text-slate-400 resize-none leading-relaxed" required />
+          <button type="submit" disabled={loading} className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40">
+            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'AI 智能出题并保存'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TreeManager({ categories, units, onReload, setError }: any) {
+  const [selectedUnit, setSelectedUnit] = useState<any>(null);
+
+  if (selectedUnit) {
+    return <UnitWordsManager unit={selectedUnit} onBack={() => setSelectedUnit(null)} setError={setError} />;
+  }
+
+  const handleDeleteCat = async (id: string) => {
+    if (!confirm('删除分类将级联删除其子分类，确定吗？')) return;
+    try { await deleteCategory(id); await onReload(); } catch (err: any) { setError(err.message); }
+  };
+
+  const handleDeleteUnit = async (id: string) => {
+    if (!confirm('确定删除该单元吗？')) return;
+    try { await deleteUnit(id); await onReload(); } catch (err: any) { setError(err.message); }
+  };
+
+  // Helper to render tree
+  const renderCategoryTree = (cats: any[], parentId: string | null = null, depth = 0) => {
+    const children = cats.filter(c => c.parentId === parentId);
+    if (children.length === 0) return null;
+
+    return (
+      <div className={`space-y-3 ${depth > 0 ? 'ml-8 mt-3 border-l-2 border-slate-200 dark:border-slate-700 pl-6 relative before:absolute before:top-0 before:-left-[2px] before:w-[2px] before:h-full before:bg-gradient-to-b before:from-indigo-500/50 before:to-transparent' : ''}`}>
+        {children.map(cat => (
+          <div key={cat.id} className="space-y-3">
+            <div className="flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center gap-3 font-bold text-slate-800 dark:text-slate-200 text-lg">
+                <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg text-amber-500">
+                  <Folder className="w-5 h-5 fill-amber-500/20" />
+                </div>
+                {cat.name}
+              </div>
+              <button onClick={() => handleDeleteCat(cat.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2.5 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"><Trash2 className="w-5 h-5" /></button>
             </div>
-            内容结构树
-          </h3>
-          
-          <div className="relative z-10 space-y-6">
-            {/* Root Units */}
-            {rootUnits.length > 0 && (
-              <div className="space-y-3">
-                {rootUnits.map((u: any) => (
-                  <div key={u.id} className="flex items-center justify-between bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow group">
-                    <div className="flex items-center gap-3 font-bold text-slate-800 dark:text-slate-200 text-lg">
-                      <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-500">
-                        <FileText className="w-5 h-5" />
+            
+            {/* Units in this category */}
+            {cat.units?.length > 0 && (
+              <div className="ml-8 space-y-2 mt-2">
+                {cat.units.map((u: any) => (
+                  <div key={u.id} className="flex items-center justify-between bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-800/50 transition-colors group/unit">
+                    <div className="flex items-center gap-3 text-sm font-bold text-slate-700 dark:text-slate-300">
+                      <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-md text-indigo-500">
+                        <FileText className="w-4 h-4" />
                       </div>
                       {u.name} 
-                      <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-md text-xs font-bold">
+                      <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded text-xs font-bold">
                         {u._count?.words || 0} 词
                       </span>
                     </div>
-                    <button onClick={() => handleDeleteUnit(u.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2.5 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"><Trash2 className="w-5 h-5" /></button>
+                    <div className="flex items-center gap-2 opacity-0 group-hover/unit:opacity-100 focus-within:opacity-100 transition-all">
+                      <button onClick={() => setSelectedUnit(u)} className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-2 rounded-lg transition-all"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleDeleteUnit(u.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
-
-            {/* Category Tree */}
-            <div className="space-y-4">
-              {renderCategoryTree(categories)}
-            </div>
-
-            {categories.length === 0 && rootUnits.length === 0 && (
-              <div className="text-center text-slate-400 dark:text-slate-500 py-20 flex flex-col items-center gap-4">
-                <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-                  <FolderTree className="w-10 h-10 opacity-50" />
-                </div>
-                <p className="text-lg font-medium">暂无任何内容，请在左侧添加</p>
-              </div>
-            )}
+            
+            {renderCategoryTree(cats, cat.id, depth + 1)}
           </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Root units
+  const rootUnits = units.filter((u: any) => !u.categoryId);
+
+  return (
+    <div className="max-w-4xl mx-auto pb-20">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 min-h-[800px] relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <h3 className="text-2xl font-black mb-8 text-slate-800 dark:text-slate-100 relative z-10 flex items-center gap-3">
+          <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400">
+            <FolderTree className="w-6 h-6" />
+          </div>
+          内容结构树
+        </h3>
+        
+        <div className="relative z-10 space-y-6">
+          {/* Root Units */}
+          {rootUnits.length > 0 && (
+            <div className="space-y-3">
+              {rootUnits.map((u: any) => (
+                <div key={u.id} className="flex items-center justify-between bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow group">
+                  <div className="flex items-center gap-3 font-bold text-slate-800 dark:text-slate-200 text-lg">
+                    <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-500">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    {u.name} 
+                    <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-md text-xs font-bold">
+                      {u._count?.words || 0} 词
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all">
+                    <button onClick={() => setSelectedUnit(u)} className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-2.5 rounded-xl transition-all"><Edit2 className="w-5 h-5" /></button>
+                    <button onClick={() => handleDeleteUnit(u.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2.5 rounded-xl transition-all"><Trash2 className="w-5 h-5" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Category Tree */}
+          <div className="space-y-4">
+            {renderCategoryTree(categories)}
+          </div>
+
+          {categories.length === 0 && rootUnits.length === 0 && (
+            <div className="text-center text-slate-400 dark:text-slate-500 py-20 flex flex-col items-center gap-4">
+              <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                <FolderTree className="w-10 h-10 opacity-50" />
+              </div>
+              <p className="text-lg font-medium">暂无任何内容，请在左侧添加</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

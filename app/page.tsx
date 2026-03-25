@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BookOpen, CheckCircle, XCircle, ArrowRight, RefreshCw, Trophy, Volume2, MessageCircle, X, Send, Loader2, Bot, LogOut, Settings, Save } from 'lucide-react';
+import { BookOpen, CheckCircle, XCircle, ArrowRight, RefreshCw, Trophy, Volume2, MessageCircle, X, Send, Loader2, Bot, LogOut, Settings, Save, Activity } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { createAIService, type AIConfig } from '@/lib/ai-service';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -11,6 +11,8 @@ import { checkDbConfigured, getSessionData, logout, saveProgress, deleteProgress
 import { Login } from '@/components/Login';
 import { AdminPanel } from '@/components/AdminPanel';
 import { Dashboard } from '@/components/Dashboard';
+
+import { UserPanel } from '@/components/UserPanel';
 
 // --- Types ---
 type ExerciseType = 'EN_TO_ZH' | 'ZH_TO_EN' | 'SPELL' | 'FILL' | 'AUDIO_TO_ZH' | 'AUDIO_SPELL';
@@ -329,11 +331,12 @@ const AIAssistant = () => {
 
 // --- Main App ---
 export default function App() {
-  const [appState, setAppState] = useState<'INPUT' | 'ANALYZING' | 'EXERCISE' | 'RESULT' | 'LOGIN' | 'DASHBOARD' | 'ADMIN'>('INPUT');
+  const [appState, setAppState] = useState<'INPUT' | 'ANALYZING' | 'EXERCISE' | 'RESULT' | 'LOGIN' | 'DASHBOARD' | 'ADMIN' | 'USER_PANEL'>('INPUT');
   const [isDbConfigured, setIsDbConfigured] = useState(false);
   const [user, setUser] = useState<{ id: string, username: string, role: string, avatarUrl?: string } | null>(null);
   const [currentUnitId, setCurrentUnitId] = useState<string | null>(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
+  const [practiceContext, setPracticeContext] = useState<any>(null);
 
   useEffect(() => {
     checkDbConfigured().then(configured => {
@@ -366,15 +369,25 @@ export default function App() {
       stepCounter,
       stats,
       wordStats,
-      currentSessionId
+      currentSessionId,
+      practiceContext
     };
-    if (currentSessionId) await pauseSession(currentSessionId);
+    if (currentSessionId) {
+      let totalCorrect = 0;
+      let total = 0;
+      Object.values(stats).forEach(s => {
+        totalCorrect += s.correct;
+        total += s.total;
+      });
+      const accuracy = total > 0 ? totalCorrect / total : 0;
+      await pauseSession(currentSessionId, { accuracy }, wordStats);
+    }
     await saveProgress(currentUnitId, progressData, isReviewMode);
     alert('进度已保存！');
     setAppState('DASHBOARD');
   };
 
-  const handleStartExercise = async (words: any[], unitId: string | null, isReview: boolean, savedProgress?: any) => {
+  const handleStartExercise = async (words: any[], unitId: string | null, isReview: boolean, savedProgress?: any, contextInfo?: any) => {
     setCurrentUnitId(unitId);
     setIsReviewMode(isReview);
     
@@ -383,19 +396,21 @@ export default function App() {
         await resumeSession(savedProgress.currentSessionId);
         setCurrentSessionId(savedProgress.currentSessionId);
       } else {
-        const sessionId = await startSession(unitId, isReview);
+        const sessionId = await startSession(unitId, isReview, savedProgress.practiceContext || contextInfo);
         if (sessionId) setCurrentSessionId(sessionId);
       }
       setWordProgresses(savedProgress.wordProgresses);
       setStepCounter(savedProgress.stepCounter);
       setStats(savedProgress.stats);
       setWordStats(savedProgress.wordStats);
+      setPracticeContext(savedProgress.practiceContext || contextInfo);
       pickNextExercise(savedProgress.wordProgresses, savedProgress.stepCounter);
       setAppState('EXERCISE');
       return;
     }
 
-    const sessionId = await startSession(unitId, isReview);
+    setPracticeContext(contextInfo);
+    const sessionId = await startSession(unitId, isReview, contextInfo);
     if (sessionId) setCurrentSessionId(sessionId);
 
     const progresses: WordProgress[] = words.map(word => {
@@ -664,7 +679,16 @@ export default function App() {
 
   const handleGoToDashboard = async () => {
     if (appState === 'EXERCISE') {
-      if (currentSessionId) await pauseSession(currentSessionId);
+      if (currentSessionId) {
+        let totalCorrect = 0;
+        let total = 0;
+        Object.values(stats).forEach(s => {
+          totalCorrect += s.correct;
+          total += s.total;
+        });
+        const accuracy = total > 0 ? totalCorrect / total : 0;
+        await pauseSession(currentSessionId, { accuracy }, wordStats);
+      }
       if (user && user.role !== 'ADMIN') {
         const progressData = { wordProgresses, stepCounter, stats, wordStats, currentSessionId };
         await saveProgress(currentUnitId, progressData, isReviewMode);
@@ -707,6 +731,9 @@ export default function App() {
                     <Settings className="w-4 h-4" /> 管理
                   </button>
                 )}
+                <button onClick={() => setAppState('USER_PANEL')} className="flex items-center gap-1.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-slate-100/50 dark:bg-slate-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-1.5 rounded-full">
+                  <Activity className="w-4 h-4" /> 我的记录
+                </button>
                 <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors bg-slate-100/50 dark:bg-slate-800/50 hover:bg-rose-50 dark:hover:bg-rose-900/30 px-3 py-1.5 rounded-full">
                   <LogOut className="w-4 h-4" /> 退出
                 </button>
@@ -734,7 +761,13 @@ export default function App() {
 
           {appState === 'DASHBOARD' && user && (
             <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Dashboard onStartExercise={handleStartExercise} />
+              <Dashboard onStartExercise={handleStartExercise} onUserPanelClick={() => setAppState('USER_PANEL')} />
+            </motion.div>
+          )}
+
+          {appState === 'USER_PANEL' && user && (
+            <motion.div key="user-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <UserPanel onBack={() => setAppState('DASHBOARD')} />
             </motion.div>
           )}
 
@@ -815,6 +848,26 @@ export default function App() {
               className="max-w-6xl mx-auto mt-8 px-4 flex flex-col lg:flex-row gap-8 items-start relative z-10 pb-20"
             >
               <div className="flex-1 w-full max-w-4xl mx-auto">
+                {practiceContext && (
+                  <div className="mb-6 flex items-center justify-center">
+                    <div className="inline-flex items-center gap-3 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md px-6 py-2.5 rounded-full border border-slate-200/50 dark:border-slate-800/50 shadow-sm">
+                      <span className="flex items-center gap-2 text-sm font-black text-indigo-600 dark:text-indigo-400">
+                        {practiceContext.type === 'REVIEW' ? <RefreshCw className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
+                        {practiceContext.title}
+                      </span>
+                      <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                      <span className="text-sm font-bold text-slate-500 dark:text-slate-400">{practiceContext.subtitle}</span>
+                      {practiceContext.details && (
+                        <>
+                          <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                          <span className="text-sm font-medium text-slate-400 dark:text-slate-500 max-w-[200px] truncate" title={practiceContext.details}>{practiceContext.details}</span>
+                        </>
+                      )}
+                      <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                      <span className="text-sm font-bold text-slate-500 dark:text-slate-400">共 {practiceContext.totalWords || totalWords} 词</span>
+                    </div>
+                  </div>
+                )}
                 <div className="mb-8">
                   <div className="flex justify-between items-end mb-4">
                     <div className="flex items-center gap-4 text-sm font-bold text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-slate-900/50 px-4 py-2 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 backdrop-blur-sm shadow-sm">

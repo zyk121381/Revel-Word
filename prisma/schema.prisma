@@ -73,6 +73,7 @@ model PracticeSession {
   events      Json      // [{ type: 'START', time: '...' }, { type: 'PAUSE', time: '...' }, { type: 'RESUME', time: '...' }, { type: 'END', time: '...' }]
   stats       Json?     // Overall accuracy
   wordStats   Json?     // Per-word error counts
+  context     Json?     // Practice context (e.g., which units were reviewed)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }

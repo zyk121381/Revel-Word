@@ -25,7 +25,7 @@ export const analyzeWords = async (words: string): Promise<WordData[]> => {
 3. 相关的词汇变形（如过去式、过去分词、复数、副词形式等，请注明变形类型）
 4. 一个英文例句
 5. 例句的中文翻译
-6. 3个用于选择题的中文干扰项（必须包含词性，例如 "adj. 快的"）。注意：中文干扰项必须具有迷惑性，且选项之间不可以出现重复的词语（除非词性不同）。**非常重要：如果正确答案（简短中文翻译）包含多个词性或多个意思导致较长，请确保这3个干扰项也具有类似的长度和格式（例如也包含多个词性和意思），避免用户通过选项长度直接猜出正确答案。**
+6. 3个用于选择题的中文干扰项（必须包含词性，例如 "adj. 快的"）。注意：中文干扰项必须具有迷惑性，且选项之间不可以出现重复的词语（除非词性不同），干扰项中绝对不可以出现英文。**非常重要：如果正确答案（简短中文翻译）包含多个词性或多个意思导致较长，请确保这3个干扰项也具有类似的长度和格式（例如也包含多个词性和意思），避免用户通过选项长度直接猜出正确答案。**
 7. 3个用于选择题的英文干扰项（形近词或其他单词）
 
 如果输入的文本中包含非英语单词或无意义的内容，请忽略它们。只返回有效英语单词的分析结果。
@@ -62,7 +62,7 @@ ${words}`;
             },
             example: { type: "STRING", description: "英文例句" },
             exampleTranslation: { type: "STRING", description: "例句中文翻译" },
-            distractorsZh: { type: "ARRAY", items: { type: "STRING" }, description: "3个中文干扰项（必须包含词性，如 v. 跑。长度和格式必须与正确答案相似，避免过短）" },
+            distractorsZh: { type: "ARRAY", items: { type: "STRING" }, description: "3个中文干扰项（必须包含词性，且不能包含英文单词，如 v. 跑。长度和格式必须与正确答案相似，避免过短）" },
             distractorsEn: { type: "ARRAY", items: { type: "STRING" }, description: "3个英文干扰项" },
           },
           required: ["word", "translation", "definitions", "relatedForms", "example", "exampleTranslation", "distractorsZh", "distractorsEn"]
