@@ -18,7 +18,8 @@
 
 ## ✨ 功能特性
 
-- 🤖 **多 AI 支持** - 支持切换 OpenAI 和 Gemini 两种 AI 提供商
+### 核心功能
+- 🤖 **多 AI 支持** - 支持 OpenAI 和 Gemini 两种 AI 提供商
 - 📚 **多题型训练** - 英译中、中译英、拼写、补全单词、听音辨意、听音拼写六大题型
 - 🧠 **间隔重复算法** - 基于 Spaced Repetition 的科学记忆方法
 - 📊 **进度追踪** - 实时统计准确率、学习进度、单词掌握情况
@@ -26,6 +27,15 @@
 - 💬 **AI 学习助手** - 实时问答功能，解答单词、语法、用法问题
 - 🎨 **精美界面** - 现代化 UI 设计，流畅的动画交互体验
 - 🌐 **兼容性** - 支持 OpenAI、Gemini 及各类 OpenAI 兼容 API
+
+### 数据库与用户系统 (可选)
+- 🔐 **用户认证** - 基于 JWT 的安全会话管理，支持管理员和普通用户角色
+- 📁 **单词单元管理** - 管理员可创建分类和单词单元，AI 自动生成训练题目
+- 💾 **学习进度保存** - 支持保存学习进度，下次可继续学习
+- 🔄 **智能复习** - 用户可选择多个单元，自定义复习单词数量
+- 📈 **练习记录** - 详细记录每次练习的准确率、时间线和错词统计
+- 👥 **用户管理** - 管理员可添加/编辑用户，查看用户练习记录并导出数据
+- 🎯 **继续学习** - 首页显示未完成的练习，一键继续上次进度
 
 ## 🚀 快速开始
 
@@ -44,10 +54,10 @@ npm install
 
 2. 配置环境变量
 
-复制 `.env.local.example` 文件为 `.env.local`：
+复制 `.env.example` 文件为 `.env`：
 
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env
 ```
 
 根据你的使用场景选择配置方式：
@@ -96,6 +106,40 @@ APP_URL="http://localhost:3000"
 > ✅ **推荐**：此模式下 API 密钥不会暴露到客户端，安全性更高。
 
 > 💡 OpenAI API 版本支持兼容 OpenAI 的第三方服务，如 OpenRouter、DeepSeek、通义千问、Moonshot 等
+
+### 可选：启用数据库功能
+
+如果要启用用户系统、单词单元管理等高级功能，需配置数据库：
+
+1. 在 `.env` 中添加数据库配置：
+
+```env
+# 数据库连接字符串 (PostgreSQL 或 MySQL)
+DATABASE_URL="postgresql://user:password@localhost:5432/mydb"
+
+# 初始管理员账号密码
+ADMIN_USERNAME="admin"
+ADMIN_PASSWORD="your_secure_password"
+
+# 用于加密用户登录状态的密钥
+JWT_SECRET="your_super_secret_key_here"
+```
+
+2. （可选）切换数据库类型：
+
+打开 `prisma/schema.prisma` 文件，第 6 行：
+- 使用 PostgreSQL：`provider = "postgresql"` (默认)
+- 使用 MySQL：`provider = "mysql"`
+
+3. 同步数据库结构：
+
+```bash
+npx prisma db push
+```
+
+完成以上步骤后，刷新页面即可看到全新的登录界面和管理后台！
+
+**注意**：如果不配置 `DATABASE_URL`，应用将继续以原有的单机模式运行。
 
 3. 启动开发服务器
 
@@ -172,6 +216,20 @@ npm start
 - 客户端模式（`NEXT_PUBLIC_*`）：变量会暴露到浏览器，仅适合本地开发或学习测试
 - 服务端模式（不带前缀）：变量只在服务器端使用，不会暴露给客户端，适合生产部署
 
+### 数据库相关 (可选)
+
+| 变量名 | 说明 | 必需 | 默认值 |
+|--------|------|------|--------|
+| `DATABASE_URL` | 数据库连接字符串 | ❌ | - |
+| `ADMIN_USERNAME` | 管理员用户名 | ❌ | admin |
+| `ADMIN_PASSWORD` | 管理员密码 | ❌ | - |
+| `JWT_SECRET` | JWT 加密密钥 | ❌ | - |
+
+**数据库说明**：
+- 支持 PostgreSQL 和 MySQL（在 `prisma/schema.prisma` 中配置）
+- 配置后自动启用用户认证、单词单元管理等高级功能
+- 未配置时保持单机模式运行
+
 ### 支持的模型
 
 **OpenAI 兼容的大语言模型推荐：**
@@ -198,6 +256,8 @@ npm start
 - **AI SDK**: OpenAI 4.71.1, Google GenAI 1.17.0
 - **图标**: Lucide React 0.553.0
 - **Markdown**: react-markdown 10.1.0
+- **数据库**: Prisma ORM (可选)
+- **认证**: JWT (可选)
 
 ## 📁 项目结构
 
@@ -209,19 +269,28 @@ revelation-ai-studio-applet/
 │   │   └── generate/       # 内容生成 API 端点
 │   ├── layout.tsx          # 根布局
 │   ├── page.tsx            # 主应用页面（客户端）
+│   ├── actions.ts          # 服务端操作函数
 │   └── globals.css         # 全局样式
 ├── lib/
 │   ├── ai-server.ts        # 服务端 AI 服务抽象层
 │   ├── ai-service.ts       # 客户端 AI 服务封装
+│   ├── auth.ts             # JWT 认证
 │   ├── rate-limit.ts       # API 速率限制
+│   ├── analyze.ts          # 单词分析
 │   └── utils.ts            # 工具函数
-├── hooks/
-│   └── use-mobile.ts       # 移动端检测 Hook
 ├── components/             # React 组件
+│   ├── Dashboard.tsx       # 用户仪表盘
+│   ├── AdminPanel.tsx      # 管理后台
+│   ├── UserPanel.tsx       # 用户面板
+│   ├── UnitWordsManager.tsx # 单词单元管理
 │   ├── ThemeProvider.tsx   # 主题提供者
 │   └── ThemeToggle.tsx     # 主题切换按钮
-├── .env.local.example      # 环境变量示例
-├── .env.local              # 本地环境变量（不提交到 Git）
+├── prisma/
+│   └── schema.prisma       # 数据库模型定义
+├── hooks/
+│   └── use-mobile.ts       # 移动端检测 Hook
+├── .env.example            # 环境变量示例
+├── .env                    # 环境变量（不提交到 Git）
 └── package.json            # 项目配置
 ```
 
