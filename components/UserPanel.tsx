@@ -50,18 +50,18 @@ export function UserPanel({ onBack }: { onBack: () => void }) {
       </div>
       
       {sessions.length === 0 ? (
-        <div className="text-center p-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] border border-slate-200/50 dark:border-slate-800/50 text-slate-500 shadow-xl shadow-slate-200/20 dark:shadow-black/40">
+        <div className="text-center p-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/50 dark:border-slate-800/50 text-slate-500 shadow-xl shadow-slate-200/20 dark:shadow-black/40">
           <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
             <Activity className="w-12 h-12 opacity-50" />
           </div>
           <p className="text-xl font-medium">暂无练习记录，去开始学习吧！</p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {sessions.map((s: any) => {
             const events = s.events || [];
             return (
-              <div key={s.id} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2rem] border border-slate-200/50 dark:border-slate-800/50 shadow-lg shadow-slate-200/10 dark:shadow-black/20 hover:shadow-xl hover:shadow-slate-200/20 transition-all group relative overflow-hidden">
+              <div key={s.id} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-lg shadow-slate-200/10 dark:shadow-black/20 hover:shadow-xl hover:shadow-slate-200/20 transition-all group relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none group-hover:bg-blue-500/10 transition-colors"></div>
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative z-10 mb-8">
                   <div>
@@ -85,7 +85,7 @@ export function UserPanel({ onBack }: { onBack: () => void }) {
                     </div>
                   </div>
                   {s.stats && (
-                    <div className="text-right bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl border border-blue-100 dark:border-blue-800/50 min-w-[160px]">
+                    <div className="text-right bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800/50 min-w-[160px]">
                       <div className="text-5xl font-black text-blue-600 dark:text-blue-400 tracking-tight">{Math.round(s.stats.accuracy * 100)}%</div>
                       <div className="text-sm font-bold text-blue-400 dark:text-blue-500 uppercase tracking-wider mt-2">正确率</div>
                     </div>

@@ -60,7 +60,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
       {/* Sidebar */}
       <div className="w-72 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 flex flex-col shadow-2xl shadow-slate-200/20 dark:shadow-black/40 z-20 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-transparent dark:from-indigo-950/20 pointer-events-none"></div>
-        <div className="p-8 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center gap-4 relative z-10">
+        <div className="p-6 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center gap-4 relative z-10">
           <button onClick={onBack} className="p-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm border border-slate-200 dark:border-slate-700 hover:scale-105 active:scale-95">
             <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-300" />
           </button>
@@ -89,7 +89,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-8 md:p-12 relative bg-slate-50/50 dark:bg-slate-950/50">
+      <div className="flex-1 overflow-auto p-6 md:p-8 relative bg-slate-50/50 dark:bg-slate-950/50">
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl -mr-40 -mt-40 pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-blue-500/10 via-teal-500/5 to-transparent rounded-full blur-3xl -ml-40 -mb-40 pointer-events-none"></div>
         <div className="relative z-10 h-full">
@@ -186,8 +186,8 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
   };
 
   return (
-    <div className="space-y-10 max-w-6xl mx-auto pb-20">
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
+    <div className="space-y-6 max-w-6xl mx-auto pb-20">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <h3 className="text-2xl font-black mb-8 flex items-center gap-3 relative z-10 text-slate-800 dark:text-slate-100">
@@ -224,8 +224,8 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
         </form>
       </div>
 
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
-        <div className="p-8 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
+        <div className="p-6 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
           <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-3">
             <Users className="w-6 h-6 text-indigo-500" /> 用户列表
           </h3>
@@ -294,7 +294,7 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
 
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800">
             <h3 className="text-2xl font-black mb-6 text-slate-800 dark:text-slate-100">编辑用户</h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <input type="text" placeholder="用户名" value={editUsername} onChange={e => setEditUsername(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-950 focus:border-indigo-500 outline-none" required />
@@ -334,8 +334,8 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
 
 function UserDetails({ user, sessions, loading, onBack }: any) {
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-20">
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 flex items-center gap-6 relative overflow-hidden">
+    <div className="max-w-5xl mx-auto space-y-6 pb-20">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 flex items-center gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
         <button onClick={onBack} className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-2xl transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95 relative z-10">
           <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-300" />
@@ -374,7 +374,7 @@ function UserDetails({ user, sessions, loading, onBack }: any) {
       {loading ? (
         <div className="flex justify-center p-20"><Loader2 className="w-10 h-10 animate-spin text-indigo-500" /></div>
       ) : sessions.length === 0 ? (
-        <div className="text-center p-20 text-slate-500 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] border border-slate-200/50 dark:border-slate-800/50 shadow-xl shadow-slate-200/20 dark:shadow-black/40 flex flex-col items-center gap-4">
+        <div className="text-center p-16 text-slate-500 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-xl shadow-slate-200/20 dark:shadow-black/40 flex flex-col items-center gap-4">
           <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
             <Activity className="w-8 h-8 text-slate-400" />
           </div>
@@ -383,7 +383,7 @@ function UserDetails({ user, sessions, loading, onBack }: any) {
       ) : (
         <div className="space-y-6">
           {sessions.map((s: any) => (
-            <div key={s.id} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2rem] border border-slate-200/50 dark:border-slate-800/50 shadow-lg shadow-slate-200/10 dark:shadow-black/20 hover:shadow-xl hover:shadow-slate-200/20 transition-all group relative overflow-hidden">
+            <div key={s.id} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-lg shadow-slate-200/10 dark:shadow-black/20 hover:shadow-xl hover:shadow-slate-200/20 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none group-hover:bg-indigo-500/10 transition-colors"></div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 relative z-10">
                 <div>
@@ -555,7 +555,7 @@ function ContentManager({ categories, units, onReload, setError }: any) {
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-20">
       {/* Add Category */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-amber-500/10 transition-colors"></div>
         <h3 className="text-xl font-black mb-6 flex items-center gap-3 relative z-10 text-slate-800 dark:text-slate-100">
           <div className="p-2.5 bg-amber-100 dark:bg-amber-900/50 rounded-xl text-amber-600 dark:text-amber-400">
@@ -577,7 +577,7 @@ function ContentManager({ categories, units, onReload, setError }: any) {
       </div>
 
       {/* Add Unit */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-indigo-500/10 transition-colors"></div>
         <h3 className="text-xl font-black mb-6 flex items-center gap-3 relative z-10 text-slate-800 dark:text-slate-100">
           <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl text-indigo-600 dark:text-indigo-400">
@@ -675,7 +675,7 @@ function TreeManager({ categories, units, onReload, setError }: any) {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 min-h-[800px] relative overflow-hidden">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 min-h-[800px] relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
         <h3 className="text-2xl font-black mb-8 text-slate-800 dark:text-slate-100 relative z-10 flex items-center gap-3">
           <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400">

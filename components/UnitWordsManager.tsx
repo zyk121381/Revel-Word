@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getUnitWords, updateWord, deleteWord, addWordToUnit } from '@/app/actions';
 import { analyzeWords } from '@/lib/analyze';
 import { ArrowLeft, Trash2, Edit2, Plus, Loader2, Save, X } from 'lucide-react';
@@ -12,7 +12,7 @@ export function UnitWordsManager({ unit, onBack, setError }: any) {
   const [selectedWords, setSelectedWords] = useState<Set<string>>(new Set());
   const [regenerating, setRegenerating] = useState(false);
 
-  const loadWords = async () => {
+  const loadWords = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getUnitWords(unit.id);
@@ -23,11 +23,11 @@ export function UnitWordsManager({ unit, onBack, setError }: any) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [unit.id, setError]);
 
   useEffect(() => {
     loadWords();
-  }, [unit.id]);
+  }, [loadWords]);
 
   const toggleWordSelection = (id: string) => {
     const newSelection = new Set(selectedWords);

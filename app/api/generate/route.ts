@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     }
     
     // 限制 prompt 长度，防止恶意长文本消耗 token
-    if (body.prompt.length > 5000) {
+    if (body.prompt.length > 50000) {
       return NextResponse.json({ error: '文本过长，请减少字数' }, { status: 400 });
     }
 

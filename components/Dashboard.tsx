@@ -190,7 +190,7 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
             {unfinishedSessions.map(s => {
               const progress = s.stats ? Math.round((s.stats.correct + s.stats.incorrect) / s.stats.total * 100) : 0;
               return (
-                <div key={s.id} className="p-6 border border-slate-200/50 dark:border-slate-700/50 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col justify-between hover:shadow-2xl hover:shadow-amber-500/10 transition-all group relative overflow-hidden">
+                <div key={s.id} className="p-6 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col justify-between hover:shadow-2xl hover:shadow-amber-500/10 transition-all group relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none group-hover:bg-amber-500/10 transition-colors"></div>
                   <div className="relative z-10">
                     <h3 className="font-black text-xl flex items-center gap-3 text-slate-800 dark:text-slate-100 mb-2">
@@ -241,19 +241,19 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
         </div>
 
         {categories.length === 0 && rootUnits.length === 0 ? (
-          <div className="text-center p-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] border border-slate-200/50 dark:border-slate-800/50 text-slate-500 shadow-xl shadow-slate-200/20 dark:shadow-black/40">
+          <div className="text-center p-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/50 dark:border-slate-800/50 text-slate-500 shadow-xl shadow-slate-200/20 dark:shadow-black/40">
             <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
               <Folder className="w-12 h-12 opacity-50" />
             </div>
             <p className="text-xl font-medium">暂无单元，请联系管理员添加。</p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Root Units */}
             {rootUnits.length > 0 && (
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
                 {rootUnits.map(u => (
-                  <div key={u.id} className="p-6 border border-slate-200/50 dark:border-slate-700/50 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col justify-between hover:shadow-2xl hover:shadow-indigo-500/10 transition-all group relative overflow-hidden">
+                  <div key={u.id} className="p-6 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col justify-between hover:shadow-2xl hover:shadow-indigo-500/10 transition-all group relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none group-hover:bg-indigo-500/10 transition-colors"></div>
                     <div className="relative z-10">
                       <h3 className="font-black text-xl flex items-center gap-3 text-slate-800 dark:text-slate-100 mb-2">
@@ -277,7 +277,7 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
             )}
 
             {/* Category Tree */}
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50">
               {renderCategoryTree(categories)}
             </div>
           </div>
@@ -285,11 +285,11 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
       </section>
 
       {/* Review Section */}
-      <section className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 md:p-12 rounded-[3rem] shadow-2xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden">
+      <section className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/10 rounded-full blur-[100px] -ml-20 -mb-20 pointer-events-none"></div>
         
-        <div className="flex items-center gap-4 mb-10 relative z-10">
+        <div className="flex items-center gap-4 mb-8 relative z-10">
           <div className="p-3.5 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl shadow-lg shadow-emerald-500/20">
             <RefreshCw className="w-8 h-8 text-white" />
           </div>
@@ -298,8 +298,8 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
           </h2>
         </div>
 
-        <div className="space-y-10 relative z-10 max-w-3xl">
-          <div className="bg-slate-50/50 dark:bg-slate-950/50 p-8 rounded-3xl border border-slate-200/50 dark:border-slate-800/50">
+        <div className="space-y-6 relative z-10 w-full">
+          <div className="bg-slate-50/50 dark:bg-slate-950/50 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 w-full">
             <label className="flex items-center gap-3 text-lg font-black text-slate-800 dark:text-slate-200 mb-6">
               <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">1</div>
               选择要复习的单元
@@ -314,7 +314,7 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
                   <button
                     key={u.id}
                     onClick={() => toggleUnitSelection(u.id)}
-                    className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all border-2 flex flex-col items-start ${
+                    className={`px-6 py-3 rounded-xl text-sm font-bold transition-all border-2 flex flex-col items-start ${
                       selectedUnits.includes(u.id) 
                         ? 'bg-emerald-50 border-emerald-500 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/50 dark:text-emerald-300 shadow-md shadow-emerald-500/10 scale-105' 
                         : 'bg-white dark:bg-slate-900 border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-sm'
@@ -329,7 +329,7 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
             </div>
           </div>
           
-          <div className="bg-slate-50/50 dark:bg-slate-950/50 p-8 rounded-3xl border border-slate-200/50 dark:border-slate-800/50">
+          <div className="bg-slate-50/50 dark:bg-slate-950/50 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 w-full">
             <label className="flex items-center gap-3 text-lg font-black text-slate-800 dark:text-slate-200 mb-6">
               <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">2</div>
               本次复习单词数量
@@ -341,19 +341,21 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
                 max="500"
                 value={reviewCount}
                 onChange={e => setReviewCount(parseInt(e.target.value) || 10)}
-                className="w-32 p-4 text-xl font-black border-2 rounded-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all text-center text-slate-800 dark:text-slate-100 shadow-inner"
+                className="w-32 p-4 text-xl font-black border-2 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all text-center text-slate-800 dark:text-slate-100 shadow-inner"
               />
               <span className="text-slate-500 font-bold text-lg">个单词</span>
             </div>
           </div>
 
-          <button
-            onClick={handleStartReview}
-            disabled={starting || selectedUnits.length === 0}
-            className="w-full md:w-auto px-12 py-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl font-black text-xl hover:from-emerald-600 hover:to-teal-600 transition-all disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20 active:scale-95"
-          >
-            <Play className="w-6 h-6 fill-current" /> 立即开始复习
-          </button>
+          <div className="flex justify-center pt-4 w-full">
+            <button
+              onClick={handleStartReview}
+              disabled={starting || selectedUnits.length === 0}
+              className="w-full md:w-auto px-12 py-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl font-black text-xl hover:from-emerald-600 hover:to-teal-600 transition-all disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20 active:scale-95"
+            >
+              <Play className="w-6 h-6 fill-current" /> 立即开始复习
+            </button>
+          </div>
         </div>
       </section>
 
