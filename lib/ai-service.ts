@@ -64,7 +64,18 @@ class ClientAIService {
           throw new Error(`API Error: ${errorText}`);
         }
 
-        const data = await response.json();
+        const responseText = await response.text();
+        if (!responseText) {
+          throw new Error('API returned an empty response.');
+        }
+
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (e) {
+          console.error('Failed to parse API response:', responseText);
+          throw new Error(`Invalid JSON response from API: ${responseText.substring(0, 100)}...`);
+        }
         
         // Update local history
         history.push({ role: 'user', content: message });

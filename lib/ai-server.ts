@@ -63,25 +63,78 @@ class OpenAIService implements AIService {
       content: options.prompt,
     });
 
-    const response = await fetch(`${this.apiBase}/chat/completions`, {
+    const requestBody: any = {
+      model: this.model,
+      messages,
+    };
+
+    if (options.responseSchema) {
+      requestBody.response_format = { type: 'json_object' };
+      // 针对 OpenRouter 等支持路由的服务商，强制选择支持 JSON 模式的底层提供商
+      // 只有在 apiBase 包含 openrouter 时才添加此参数，避免影响其他服务商
+      if (this.apiBase.includes('openrouter')) {
+        requestBody.provider = { require_parameters: true };
+      }
+    }
+
+    let response = await fetch(`${this.apiBase}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.apiKey}`,
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://ai.studio',
+        'X-OpenRouter-Title': 'AI Studio App',
       },
-      body: JSON.stringify({
-        model: this.model,
-        messages,
-        response_format: options.responseSchema ? { type: 'json_object' } : undefined,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`OpenAI API Error: ${error}`);
+      const errorText = await response.text();
+      const isJsonFormatError = 
+        errorText.includes('No endpoints found') || 
+        errorText.includes('json_object') || 
+        errorText.includes('response_format');
+
+      if (isJsonFormatError && options.responseSchema) {
+        console.warn('Model or provider does not support json_object, retrying without response_format...');
+        delete requestBody.response_format;
+        if (requestBody.provider) {
+          delete requestBody.provider;
+        }
+
+        response = await fetch(`${this.apiBase}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
+            'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://ai.studio',
+            'X-OpenRouter-Title': 'AI Studio App',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const retryErrorText = await response.text();
+          throw new Error(`OpenAI API Error: ${retryErrorText}`);
+        }
+      } else {
+        throw new Error(`OpenAI API Error: ${errorText}`);
+      }
     }
 
-    const data = await response.json();
+    const responseText = await response.text();
+    if (!responseText) {
+      throw new Error('OpenAI API returned an empty response. Please check your API base URL and network connection.');
+    }
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse OpenAI response:', responseText);
+      throw new Error(`Invalid JSON response from OpenAI API: ${responseText.substring(0, 100)}...`);
+    }
+    
     const text = data.choices?.[0]?.message?.content || '';
 
     if (options.responseSchema) {
@@ -151,7 +204,19 @@ class OpenAIChat implements AIChat {
       throw new Error(`OpenAI API Error: ${error}`);
     }
 
-    const data = await response.json();
+    const responseText = await response.text();
+    if (!responseText) {
+      throw new Error('OpenAI API returned an empty response. Please check your API base URL and network connection.');
+    }
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse OpenAI response:', responseText);
+      throw new Error(`Invalid JSON response from OpenAI API: ${responseText.substring(0, 100)}...`);
+    }
+    
     const text = data.choices?.[0]?.message?.content || '';
 
     // Update history

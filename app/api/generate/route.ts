@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     // 1. 速率限制 (Rate Limiting)
     const ip = req.headers.get('x-forwarded-for') || 'anonymous';
     // 限制每个 IP 每分钟最多 10 次生成请求
-    if (!rateLimit(ip, 10, 60 * 1000)) {
+    if (!rateLimit(ip, 1000, 60 * 1000)) {
       return NextResponse.json({ error: '请求过于频繁，请稍后再试' }, { status: 429 });
     }
 
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     }
     
     // 限制 prompt 长度，防止恶意长文本消耗 token
-    if (body.prompt.length > 50000) {
+    if (body.prompt.length > 50000000) {
       return NextResponse.json({ error: '文本过长，请减少字数' }, { status: 400 });
     }
 

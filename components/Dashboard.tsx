@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { getCategories, getUnits, getProgress, getReviewWords, getUnitWords, getMySessions } from '@/app/actions';
 import { BookOpen, Play, RefreshCw, Loader2, Folder, FileText, ChevronRight, ChevronDown, Clock, Activity, CheckCircle2, PauseCircle } from 'lucide-react';
+import { useModal } from './useModal';
 
 export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExercise: (words: any[], unitId: string | null, isReview: boolean, savedProgress?: any, contextInfo?: any) => void, onUserPanelClick: () => void }) {
+  const { showConfirm, showAlert, ModalComponent } = useModal();
   const [categories, setCategories] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
@@ -59,20 +61,39 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
 
       const savedProgress = await getProgress(unitId, false);
       if (savedProgress) {
-        if (confirm('发现保存的学习进度，是否继续上次的学习？')) {
-          onStartExercise([], unitId, false, savedProgress, contextInfo);
-          return;
-        }
+        showConfirm({
+          title: '继续学习',
+          message: '发现保存的学习进度，是否继续上次的学习？',
+          confirmText: '继续学习',
+          cancelText: '重新开始',
+          type: 'info',
+          onConfirm: () => {
+            onStartExercise([], unitId, false, savedProgress, contextInfo);
+            setStarting(false);
+          },
+          onCancel: async () => {
+            try {
+              const words = await getUnitWords(unitId);
+              onStartExercise(words, unitId, false, undefined, { ...contextInfo, totalWords: words.length });
+            } finally {
+              setStarting(false);
+            }
+          }
+        });
+        return;
       }
       const words = await getUnitWords(unitId);
       onStartExercise(words, unitId, false, undefined, { ...contextInfo, totalWords: words.length });
     } finally {
-      setStarting(false);
+      if (!starting) setStarting(false); // Only set if not waiting for modal
     }
   };
 
   const handleStartReview = async () => {
-    if (selectedUnits.length === 0) return alert('请至少选择一个单元进行复习');
+    if (selectedUnits.length === 0) {
+      showAlert({ title: '提示', message: '请至少选择一个单元进行复习', type: 'warning' });
+      return;
+    }
     setStarting(true);
     try {
       const selectedUnitNames = selectedUnits.map(id => getFullUnitName(id));
@@ -85,16 +106,40 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
 
       const savedProgress = await getProgress(null, true);
       if (savedProgress) {
-        if (confirm('发现保存的复习进度，是否继续上次的复习？')) {
-          onStartExercise([], null, true, savedProgress, contextInfo);
-          return;
-        }
+        showConfirm({
+          title: '继续复习',
+          message: '发现保存的复习进度，是否继续上次的复习？',
+          confirmText: '继续复习',
+          cancelText: '重新开始',
+          type: 'info',
+          onConfirm: () => {
+            onStartExercise([], null, true, savedProgress, contextInfo);
+            setStarting(false);
+          },
+          onCancel: async () => {
+            try {
+              const words = await getReviewWords(selectedUnits, reviewCount);
+              if (words.length === 0) {
+                showAlert({ title: '提示', message: '所选单元中没有单词', type: 'warning' });
+                return;
+              }
+              onStartExercise(words, null, true, undefined, { ...contextInfo, totalWords: words.length });
+            } finally {
+              setStarting(false);
+            }
+          }
+        });
+        return;
       }
       const words = await getReviewWords(selectedUnits, reviewCount);
-      if (words.length === 0) return alert('所选单元中没有单词');
+      if (words.length === 0) {
+        showAlert({ title: '提示', message: '所选单元中没有单词', type: 'warning' });
+        setStarting(false);
+        return;
+      }
       onStartExercise(words, null, true, undefined, { ...contextInfo, totalWords: words.length });
     } finally {
-      setStarting(false);
+      if (!starting) setStarting(false); // Only set if not waiting for modal
     }
   };
 
@@ -359,6 +404,7 @@ export function Dashboard({ onStartExercise, onUserPanelClick }: { onStartExerci
         </div>
       </section>
 
+      <ModalComponent />
     </div>
   );
 }

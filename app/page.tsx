@@ -11,6 +11,7 @@ import { checkDbConfigured, getSessionData, logout, saveProgress, deleteProgress
 import { Login } from '@/components/Login';
 import { AdminPanel } from '@/components/AdminPanel';
 import { Dashboard } from '@/components/Dashboard';
+import { useModal } from '@/components/useModal';
 
 import { UserPanel } from '@/components/UserPanel';
 
@@ -331,6 +332,7 @@ const AIAssistant = () => {
 
 // --- Main App ---
 export default function App() {
+  const { showAlert, ModalComponent } = useModal();
   const [appState, setAppState] = useState<'INPUT' | 'ANALYZING' | 'EXERCISE' | 'RESULT' | 'LOGIN' | 'DASHBOARD' | 'ADMIN' | 'USER_PANEL'>('INPUT');
   const [isDbConfigured, setIsDbConfigured] = useState(false);
   const [user, setUser] = useState<{ id: string, username: string, role: string, avatarUrl?: string } | null>(null);
@@ -383,7 +385,7 @@ export default function App() {
       await pauseSession(currentSessionId, { accuracy }, wordStats);
     }
     await saveProgress(currentUnitId, progressData, isReviewMode);
-    alert('进度已保存！');
+    showAlert({ title: '提示', message: '进度已保存！', type: 'success' });
     setAppState('DASHBOARD');
   };
 
@@ -1216,6 +1218,7 @@ export default function App() {
         </AnimatePresence>
         <AIAssistant />
       </main>
+      <ModalComponent />
     </div>
   );
 }

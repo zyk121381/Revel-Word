@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { getUnitWords, updateWord, deleteWord, addWordToUnit } from '@/app/actions';
 import { analyzeWords } from '@/lib/analyze';
 import { ArrowLeft, Trash2, Edit2, Plus, Loader2, Save, X } from 'lucide-react';
+import { useModal } from './useModal';
 
 export function UnitWordsManager({ unit, onBack, setError }: any) {
+  const { showConfirm, ModalComponent } = useModal();
   const [words, setWords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingWord, setEditingWord] = useState<any>(null);
@@ -49,40 +51,54 @@ export function UnitWordsManager({ unit, onBack, setError }: any) {
 
   const handleRegenerate = async () => {
     if (selectedWords.size === 0) return;
-    if (!confirm(`确定要让 AI 重新生成选中的 ${selectedWords.size} 个单词的题目吗？`)) return;
     
-    setRegenerating(true);
-    try {
-      const wordsToRegenerate = words.filter(w => selectedWords.has(w.id));
-      const wordsText = wordsToRegenerate.map(w => w.word).join(', ');
-      
-      const analyzed = await analyzeWords(wordsText);
-      if (analyzed.length === 0) throw new Error('未能识别到有效的英语单词');
-      
-      // Update each word
-      for (const newWordData of analyzed) {
-        const oldWord = wordsToRegenerate.find(w => w.word.toLowerCase() === newWordData.word.toLowerCase());
-        if (oldWord) {
-          await updateWord(oldWord.id, newWordData);
+    showConfirm({
+      title: '重新生成题目',
+      message: `确定要让 AI 重新生成选中的 ${selectedWords.size} 个单词的题目吗？`,
+      confirmText: '确定生成',
+      type: 'warning',
+      onConfirm: async () => {
+        setRegenerating(true);
+        try {
+          const wordsToRegenerate = words.filter(w => selectedWords.has(w.id));
+          const wordsText = wordsToRegenerate.map(w => w.word).join(', ');
+          
+          const analyzed = await analyzeWords(wordsText);
+          if (analyzed.length === 0) throw new Error('未能识别到有效的英语单词');
+          
+          // Update each word
+          for (const newWordData of analyzed) {
+            const oldWord = wordsToRegenerate.find(w => w.word.toLowerCase() === newWordData.word.toLowerCase());
+            if (oldWord) {
+              await updateWord(oldWord.id, newWordData);
+            }
+          }
+          
+          await loadWords();
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setRegenerating(false);
         }
       }
-      
-      await loadWords();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setRegenerating(false);
-    }
+    });
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定删除该单词吗？')) return;
-    try {
-      await deleteWord(id);
-      await loadWords();
-    } catch (err: any) {
-      setError(err.message);
-    }
+    showConfirm({
+      title: '删除单词',
+      message: '确定删除该单词吗？',
+      confirmText: '删除',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteWord(id);
+          await loadWords();
+        } catch (err: any) {
+          setError(err.message);
+        }
+      }
+    });
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -258,6 +274,7 @@ export function UnitWordsManager({ unit, onBack, setError }: any) {
           ))}
         </div>
       )}
+      <ModalComponent />
     </div>
   );
 }

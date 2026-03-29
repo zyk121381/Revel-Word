@@ -7,6 +7,7 @@ import {
 } from '@/app/actions';
 import { analyzeWords } from '@/lib/analyze';
 import { UnitWordsManager } from './UnitWordsManager';
+import { useModal } from './useModal';
 import { 
   Trash2, Plus, Loader2, Users, FolderTree, Activity, 
   ChevronRight, ChevronDown, Edit2, Image as ImageIcon,
@@ -109,6 +110,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
               sessions={userSessions} 
               loading={sessionLoading} 
               onBack={() => setSelectedUser(null)} 
+              categories={categories}
             />
           )}
 
@@ -126,6 +128,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
 }
 
 function UsersView({ users, onReload, onViewUser, setError }: any) {
+  const { showConfirm, ModalComponent } = useModal();
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newAvatar, setNewAvatar] = useState('');
@@ -176,13 +179,20 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定删除该用户吗？')) return;
-    try {
-      await deleteUser(id);
-      await onReload();
-    } catch (err: any) {
-      setError(err.message);
-    }
+    showConfirm({
+      title: '删除用户',
+      message: '确定删除该用户吗？',
+      confirmText: '删除',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteUser(id);
+          await onReload();
+        } catch (err: any) {
+          setError(err.message);
+        }
+      }
+    });
   };
 
   return (
@@ -332,7 +342,17 @@ function UsersView({ users, onReload, onViewUser, setError }: any) {
   );
 }
 
-function UserDetails({ user, sessions, loading, onBack }: any) {
+function UserDetails({ user, sessions, loading, onBack, categories }: any) {
+  const getCategoryPath = (catId: string, cats: any[]): string => {
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return '';
+    if (cat.parentId) {
+      const parentPath = getCategoryPath(cat.parentId, cats);
+      return parentPath ? `${parentPath} > ${cat.name}` : cat.name;
+    }
+    return cat.name;
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-black/40 border border-slate-200/50 dark:border-slate-800/50 flex items-center gap-6 relative overflow-hidden">
@@ -391,7 +411,7 @@ function UserDetails({ user, sessions, loading, onBack }: any) {
                     <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl text-indigo-600 dark:text-indigo-400">
                       {s.isReview ? <RefreshCw className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
                     </div>
-                    {s.isReview ? '复习模式' : s.unit?.name || '未知单元'}
+                    {s.isReview ? '复习模式' : (s.unit ? (s.unit.categoryId ? `${getCategoryPath(s.unit.categoryId, categories)} > ${s.unit.name}` : s.unit.name) : '未知单元')}
                     <span className={`text-xs px-3 py-1.5 rounded-xl font-bold tracking-wide ${s.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : s.status === 'PAUSED' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'}`}>
                       {s.status === 'COMPLETED' ? '已完成' : s.status === 'PAUSED' ? '已暂停' : '进行中'}
                     </span>
@@ -455,6 +475,17 @@ function UserDetails({ user, sessions, loading, onBack }: any) {
 }
 
 function ContentManager({ categories, units, onReload, setError }: any) {
+  const { showConfirm, ModalComponent } = useModal();
+  const getCategoryPath = (catId: string, cats: any[]): string => {
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return '';
+    if (cat.parentId) {
+      const parentPath = getCategoryPath(cat.parentId, cats);
+      return parentPath ? `${parentPath} > ${cat.name}` : cat.name;
+    }
+    return cat.name;
+  };
+
   const [newCatName, setNewCatName] = useState('');
   const [parentCatId, setParentCatId] = useState('');
   
@@ -491,13 +522,27 @@ function ContentManager({ categories, units, onReload, setError }: any) {
   };
 
   const handleDeleteCat = async (id: string) => {
-    if (!confirm('删除分类将级联删除其子分类，确定吗？')) return;
-    try { await deleteCategory(id); await onReload(); } catch (err: any) { setError(err.message); }
+    showConfirm({
+      title: '删除分类',
+      message: '删除分类将级联删除其子分类，确定吗？',
+      confirmText: '删除',
+      type: 'danger',
+      onConfirm: async () => {
+        try { await deleteCategory(id); await onReload(); } catch (err: any) { setError(err.message); }
+      }
+    });
   };
 
   const handleDeleteUnit = async (id: string) => {
-    if (!confirm('确定删除该单元吗？')) return;
-    try { await deleteUnit(id); await onReload(); } catch (err: any) { setError(err.message); }
+    showConfirm({
+      title: '删除单元',
+      message: '确定删除该单元吗？',
+      confirmText: '删除',
+      type: 'danger',
+      onConfirm: async () => {
+        try { await deleteUnit(id); await onReload(); } catch (err: any) { setError(err.message); }
+      }
+    });
   };
 
   // Helper to render tree
@@ -568,7 +613,7 @@ function ContentManager({ categories, units, onReload, setError }: any) {
           <div className="relative">
             <select value={parentCatId} onChange={e => setParentCatId(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all font-medium text-slate-700 dark:text-slate-300 appearance-none">
               <option value="">作为根分类</option>
-              {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {categories.map((c: any) => <option key={c.id} value={c.id}>{getCategoryPath(c.id, categories)}</option>)}
             </select>
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
           </div>
@@ -590,7 +635,7 @@ function ContentManager({ categories, units, onReload, setError }: any) {
           <div className="relative">
             <select value={unitCatId} onChange={e => setUnitCatId(e.target.value)} className="w-full p-4 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-950/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-700 dark:text-slate-300 appearance-none">
               <option value="">无分类 (根目录)</option>
-              {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {categories.map((c: any) => <option key={c.id} value={c.id}>{getCategoryPath(c.id, categories)}</option>)}
             </select>
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
           </div>
@@ -600,11 +645,89 @@ function ContentManager({ categories, units, onReload, setError }: any) {
           </button>
         </form>
       </div>
+      <ModalComponent />
+    </div>
+  );
+}
+
+function CategoryNode({ cat, cats, depth, onEditUnit, onDeleteUnit, onDeleteCat }: any) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const children = cats.filter((c: any) => c.parentId === cat.id);
+  const hasChildren = children.length > 0 || (cat.units && cat.units.length > 0);
+
+  return (
+    <div className="space-y-3">
+      <div 
+        className="flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm hover:shadow-md transition-all group cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3 font-bold text-slate-800 dark:text-slate-200 text-lg">
+          <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg text-amber-500 flex items-center justify-center">
+            {hasChildren ? (
+              <ChevronDown className={`w-5 h-5 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+            ) : (
+              <Folder className="w-5 h-5 fill-amber-500/20" />
+            )}
+          </div>
+          {cat.name}
+        </div>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onDeleteCat(cat.id); }} 
+          className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2.5 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </div>
+      
+      {isExpanded && (
+        <>
+          {/* Units in this category */}
+          {cat.units?.length > 0 && (
+            <div className="ml-8 space-y-2 mt-2">
+              {cat.units.map((u: any) => (
+                <div key={u.id} className="flex items-center justify-between bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-800/50 transition-colors group/unit">
+                  <div className="flex items-center gap-3 text-sm font-bold text-slate-700 dark:text-slate-300">
+                    <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-md text-indigo-500">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    {u.name} 
+                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded text-xs font-bold">
+                      {u._count?.words || 0} 词
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 opacity-0 group-hover/unit:opacity-100 focus-within:opacity-100 transition-all">
+                    <button onClick={(e) => { e.stopPropagation(); onEditUnit(u); }} className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-2 rounded-lg transition-all"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); onDeleteUnit(u.id); }} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Subcategories */}
+          {children.length > 0 && (
+            <div className={`space-y-3 ml-8 mt-3 border-l-2 border-slate-200 dark:border-slate-700 pl-6 relative before:absolute before:top-0 before:-left-[2px] before:w-[2px] before:h-full before:bg-gradient-to-b before:from-indigo-500/50 before:to-transparent`}>
+              {children.map((childCat: any) => (
+                <CategoryNode 
+                  key={childCat.id} 
+                  cat={childCat} 
+                  cats={cats} 
+                  depth={depth + 1} 
+                  onEditUnit={onEditUnit} 
+                  onDeleteUnit={onDeleteUnit} 
+                  onDeleteCat={onDeleteCat} 
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
 
 function TreeManager({ categories, units, onReload, setError }: any) {
+  const { showConfirm, ModalComponent } = useModal();
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
 
   if (selectedUnit) {
@@ -612,59 +735,46 @@ function TreeManager({ categories, units, onReload, setError }: any) {
   }
 
   const handleDeleteCat = async (id: string) => {
-    if (!confirm('删除分类将级联删除其子分类，确定吗？')) return;
-    try { await deleteCategory(id); await onReload(); } catch (err: any) { setError(err.message); }
+    showConfirm({
+      title: '删除分类',
+      message: '删除分类将级联删除其子分类，确定吗？',
+      confirmText: '删除',
+      type: 'danger',
+      onConfirm: async () => {
+        try { await deleteCategory(id); await onReload(); } catch (err: any) { setError(err.message); }
+      }
+    });
   };
 
   const handleDeleteUnit = async (id: string) => {
-    if (!confirm('确定删除该单元吗？')) return;
-    try { await deleteUnit(id); await onReload(); } catch (err: any) { setError(err.message); }
+    showConfirm({
+      title: '删除单元',
+      message: '确定删除该单元吗？',
+      confirmText: '删除',
+      type: 'danger',
+      onConfirm: async () => {
+        try { await deleteUnit(id); await onReload(); } catch (err: any) { setError(err.message); }
+      }
+    });
   };
 
   // Helper to render tree
   const renderCategoryTree = (cats: any[], parentId: string | null = null, depth = 0) => {
-    const children = cats.filter(c => c.parentId === parentId);
+    const children = cats.filter((c: any) => c.parentId === parentId);
     if (children.length === 0) return null;
 
     return (
       <div className={`space-y-3 ${depth > 0 ? 'ml-8 mt-3 border-l-2 border-slate-200 dark:border-slate-700 pl-6 relative before:absolute before:top-0 before:-left-[2px] before:w-[2px] before:h-full before:bg-gradient-to-b before:from-indigo-500/50 before:to-transparent' : ''}`}>
-        {children.map(cat => (
-          <div key={cat.id} className="space-y-3">
-            <div className="flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm hover:shadow-md transition-all group">
-              <div className="flex items-center gap-3 font-bold text-slate-800 dark:text-slate-200 text-lg">
-                <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg text-amber-500">
-                  <Folder className="w-5 h-5 fill-amber-500/20" />
-                </div>
-                {cat.name}
-              </div>
-              <button onClick={() => handleDeleteCat(cat.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2.5 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"><Trash2 className="w-5 h-5" /></button>
-            </div>
-            
-            {/* Units in this category */}
-            {cat.units?.length > 0 && (
-              <div className="ml-8 space-y-2 mt-2">
-                {cat.units.map((u: any) => (
-                  <div key={u.id} className="flex items-center justify-between bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-800/50 transition-colors group/unit">
-                    <div className="flex items-center gap-3 text-sm font-bold text-slate-700 dark:text-slate-300">
-                      <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-md text-indigo-500">
-                        <FileText className="w-4 h-4" />
-                      </div>
-                      {u.name} 
-                      <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded text-xs font-bold">
-                        {u._count?.words || 0} 词
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover/unit:opacity-100 focus-within:opacity-100 transition-all">
-                      <button onClick={() => setSelectedUnit(u)} className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-2 rounded-lg transition-all"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => handleDeleteUnit(u.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {renderCategoryTree(cats, cat.id, depth + 1)}
-          </div>
+        {children.map((cat: any) => (
+          <CategoryNode 
+            key={cat.id} 
+            cat={cat} 
+            cats={cats} 
+            depth={depth} 
+            onEditUnit={setSelectedUnit} 
+            onDeleteUnit={handleDeleteUnit} 
+            onDeleteCat={handleDeleteCat} 
+          />
         ))}
       </div>
     );
@@ -723,6 +833,7 @@ function TreeManager({ categories, units, onReload, setError }: any) {
           )}
         </div>
       </div>
+      <ModalComponent />
     </div>
   );
 }
